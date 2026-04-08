@@ -452,23 +452,43 @@ function applyHL(pageN,tl){
   if(!curPaper||!hls[curPaper.id])return;
   const phl=hls[curPaper.id].filter(h=>h.page===pageN);
   if(!phl.length)return;
-  console.log('Applying',phl.length,'highlights to page',pageN);
-  // Collect all span text for matching
   const spans=Array.from(tl.querySelectorAll('span'));
+  if(!spans.length)return;
+
+  // Build full page text with character→span mapping
+  let fullText='';
+  const charToSpan=[]; // charToSpan[i] = span index
+  spans.forEach((sp,si)=>{
+    const t=sp.textContent;
+    for(let j=0;j<t.length;j++){
+      charToSpan.push(si);
+    }
+    fullText+=t;
+  });
+
+  // For each highlight, find its position in fullText and mark spans
   phl.forEach(h=>{
-    const hlText=h.text.replace(/\s+/g,' ').trim();
-    // Try exact span match first
-    spans.forEach(sp=>{
-      const t=sp.textContent.trim();
-      if(!t||t.length<2)return;
-      // Match: span text is part of highlight, or highlight is part of span
-      if(hlText.includes(t)||t.includes(hlText)){
-        sp.style.backgroundColor=HL_COLORS[h.color]||HL_COLORS.yellow;
-        sp.style.borderRadius='2px';
-        sp.style.opacity='1';
-        sp.style.mixBlendMode='multiply';
-        console.log('Highlight matched span:',t.slice(0,30));
-      }
+    const needle=h.text.replace(/\s+/g,' ').trim();
+    // Try exact match first
+    let idx=fullText.indexOf(needle);
+    if(idx===-1){
+      // Try normalized (collapse whitespace in both)
+      const normFull=fullText.replace(/\s+/g,' ');
+      idx=normFull.indexOf(needle);
+    }
+    if(idx===-1)return;
+
+    // Find which spans are covered by [idx, idx+needle.length)
+    const spanSet=new Set();
+    for(let i=idx;i<idx+needle.length&&i<charToSpan.length;i++){
+      spanSet.add(charToSpan[i]);
+    }
+    // Apply highlight to those spans only
+    const bg=HL_COLORS[h.color]||HL_COLORS.yellow;
+    spanSet.forEach(si=>{
+      spans[si].style.backgroundColor=bg;
+      spans[si].style.borderRadius='2px';
+      spans[si].style.opacity='1';
     });
   });
 }
