@@ -86,6 +86,18 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 .rt.done span{text-decoration:line-through;opacity:.45}
 .ro{font-size:11px;font-weight:700;color:var(--ac);background:var(--acs);display:inline-block;padding:3px 10px;border-radius:5px;margin-top:6px}
 .loading{text-align:center;padding:40px;color:var(--mt);font-size:13px}
+/* Reader text mode */
+#reader-text{-webkit-overflow-scrolling:touch}
+.rt-page{max-width:640px;margin:0 auto 24px;padding:20px;background:var(--card);border-radius:10px;border:1px solid var(--bd)}
+.rt-page-num{font-size:10px;color:var(--mt);text-align:center;margin-bottom:12px;font-weight:600;letter-spacing:1px}
+.rt-page p{font-size:15px;line-height:1.85;color:var(--t2);margin-bottom:8px;word-break:break-word}
+.rt-page ::selection{background:rgba(255,235,59,.4)}
+#float-hl{display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:80;background:var(--card);border:1px solid var(--bd);border-radius:24px;padding:6px 10px;box-shadow:0 4px 20px rgba(0,0,0,.5);gap:6px;align-items:center}
+#float-hl .cb{width:30px;height:30px}
+#float-hl span{font-size:11px;color:var(--mt);margin-right:4px}
+.rt-toolbar{display:flex;gap:8px;justify-content:center;margin-bottom:16px}
+.rt-toolbar button{font:600 11px inherit;padding:5px 14px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--t2);cursor:pointer}
+.rt-toolbar button.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 /* Mobile topbar */
 #mtb{display:none;position:sticky;top:0;z-index:40;background:var(--sb);border-bottom:1px solid var(--bd);padding:10px 14px;align-items:center;justify-content:space-between}
 #mtb h1{font-size:14px;font-weight:800}
@@ -108,6 +120,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
   #rtb button,#rtb select{font-size:10px;padding:4px 8px}
   #rbd{flex-direction:column;height:calc(100vh - 42px)}
   #pdf-iframe{flex:1!important;min-height:0}
+  #reader-text{flex:1!important;min-height:0;padding:12px!important}
+  .rt-page{padding:16px;margin-bottom:16px}
+  .rt-page p{font-size:14px;line-height:1.8}
   #pdfbox{padding:8px}
   #hlp{position:relative!important;width:100%!important;min-width:0!important;max-height:35vh;z-index:65;border-left:none!important;border-top:1px solid var(--bd);border-radius:0;overflow-y:auto;flex-shrink:0}
   #uz{padding:16px}
@@ -143,6 +158,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
   <div id="rbd">
     <div id="uz"></div>
     <div id="pdfbox"></div>
+    <div id="reader-text" style="display:none;flex:1;overflow-y:auto;padding:20px;background:var(--bg)"></div>
     <iframe id="pdf-iframe" style="display:none;flex:1;border:none;width:100%;height:100%"></iframe>
     <div id="hlp"><h3>📝 我的標記</h3><div id="hl-add-mobile" style="display:none;margin-bottom:10px"><textarea id="hl-input" rows="2" placeholder="貼上要標記的文字..." style="width:100%;font:12px inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--t);resize:vertical"></textarea><div style="display:flex;gap:4px;margin-top:4px"><button class="cb" style="background:rgba(255,235,59,.6)" onclick="addHLManual('yellow')"></button><button class="cb" style="background:rgba(76,175,80,.5)" onclick="addHLManual('green')"></button><button class="cb" style="background:rgba(233,30,99,.45)" onclick="addHLManual('pink')"></button><button class="cb" style="background:rgba(33,150,243,.45)" onclick="addHLManual('blue')"></button></div></div><div id="hll"></div></div>
   </div>
@@ -152,6 +168,13 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
   <button class="cb" style="background:rgba(76,175,80,.5)" onclick="addHL('green')"></button>
   <button class="cb" style="background:rgba(233,30,99,.45)" onclick="addHL('pink')"></button>
   <button class="cb" style="background:rgba(33,150,243,.45)" onclick="addHL('blue')"></button>
+</div>
+<div id="float-hl">
+  <span>標記：</span>
+  <button class="cb" style="background:rgba(255,235,59,.6)" onclick="addHLFromSel('yellow')"></button>
+  <button class="cb" style="background:rgba(76,175,80,.5)" onclick="addHLFromSel('green')"></button>
+  <button class="cb" style="background:rgba(233,30,99,.45)" onclick="addHLFromSel('pink')"></button>
+  <button class="cb" style="background:rgba(33,150,243,.45)" onclick="addHLFromSel('blue')"></button>
 </div>
 <script>
 // ===== SUPABASE =====
@@ -353,18 +376,26 @@ async function openR(id){
   pdf=null;pg=1;
   await loadHL(id);
 
-  // Mobile: use native PDF viewer via iframe
+  // Mobile: reader text mode
   if(isMobile()){
-    $('hl-add-mobile').style.display='block';
-    // Hide desktop-only toolbar buttons
     document.querySelectorAll('.desktop-only').forEach(el=>el.style.display='none');
-    const url=`${SB_PUBLIC}/${id}.pdf`;
-    const viewerUrl=`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
     $('uz').style.display='none';
-    $('pdf-iframe').src=viewerUrl;
-    $('pdf-iframe').style.display='flex';
+    $('pdf-iframe').style.display='none';
+    $('reader-text').style.display='block';
+    $('reader-text').innerHTML='<div class="loading">正在載入閱讀器模式...</div>';
     $('hlp').classList.add('show');
+    $('hl-add-mobile').style.display='block';
     renderHLL();
+    try{
+      const{data}=await sb.storage.from(BUCKET).download(`${id}.pdf`);
+      if(data){
+        const buf=await data.arrayBuffer();
+        await renderReaderMode(buf);
+        return;
+      }
+    }catch(e){}
+    // Fallback: show download links
+    $('reader-text').innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--mt);margin-bottom:14px">PDF 尚未上傳至 Supabase</p>${curPaper.ax?`<a class="lb" href="https://arxiv.org/pdf/${curPaper.ax}.pdf" target="_blank">從 arXiv 下載 PDF↗</a>`:''}</div>`;
     return;
   }
 
@@ -472,7 +503,112 @@ async function renderPg(n){
 function prevP(){if(pdf&&pg>1){pg--;renderPg(pg)}}
 function nextP(){if(pdf&&pg<pdf.numPages){pg++;renderPg(pg)}}
 function chgZ(v){zoom=parseFloat(v);if(pdf)renderPg(pg)}
-function closeR(){$('rd').classList.remove('show');$('mn').style.display='block';pdf=null;$('pdf-iframe').src='';$('pdf-iframe').style.display='none';$('hlp').classList.remove('show')}
+function closeR(){$('rd').classList.remove('show');$('mn').style.display='block';pdf=null;$('pdf-iframe').src='';$('pdf-iframe').style.display='none';$('reader-text').style.display='none';$('hlp').classList.remove('show');$('float-hl').style.display='none'}
+
+// ===== READER TEXT MODE (mobile) =====
+async function renderReaderMode(buf){
+  const doc=await pdfjsLib.getDocument({data:buf}).promise;
+  const rt=$('reader-text');
+  let html='<div class="rt-toolbar"><button class="active" onclick="this.parentElement.querySelectorAll(\'button\').forEach(b=>b.classList.remove(\'active\'));this.classList.add(\'active\');document.querySelectorAll(\'.rt-page\').forEach(p=>p.style.display=\'\')">全部頁面</button></div>';
+  const pages=[];
+  for(let i=1;i<=doc.numPages;i++){
+    const page=await doc.getPage(i);
+    const tc=await page.getTextContent();
+    // Group text items into lines by Y position
+    const lines=[];
+    let curLine=[];let lastY=null;
+    tc.items.forEach(item=>{
+      if(!item.str.trim())return;
+      const y=Math.round(item.transform[5]);
+      if(lastY!==null&&Math.abs(y-lastY)>3){
+        if(curLine.length)lines.push(curLine.join(' '));
+        curLine=[];
+      }
+      curLine.push(item.str);
+      lastY=y;
+    });
+    if(curLine.length)lines.push(curLine.join(' '));
+    // Group lines into paragraphs (empty line or large gap = new paragraph)
+    const paragraphs=[];let curPara=[];
+    lines.forEach(line=>{
+      const trimmed=line.trim();
+      if(!trimmed){
+        if(curPara.length)paragraphs.push(curPara.join(' '));
+        curPara=[];
+      }else{
+        // If line ends with period/hyphen or next starts with lowercase, merge
+        curPara.push(trimmed);
+      }
+    });
+    if(curPara.length)paragraphs.push(curPara.join(' '));
+    const pageText=paragraphs.map(p=>`<p>${escHTML(p)}</p>`).join('');
+    pages.push(pageText);
+    html+=`<div class="rt-page" data-page="${i}"><div class="rt-page-num">— 第 ${i} / ${doc.numPages} 頁 —</div>${pageText}</div>`;
+  }
+  rt.innerHTML=html;
+  // Apply saved highlights as text background
+  applyReaderHL();
+  // Listen for text selection
+  rt.addEventListener('mouseup',checkReaderSel);
+  rt.addEventListener('touchend',()=>setTimeout(checkReaderSel,200));
+}
+
+function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function checkReaderSel(){
+  const sel=window.getSelection();
+  const text=sel.toString().trim();
+  const fh=$('float-hl');
+  if(text.length>2){
+    fh.style.display='flex';
+  }else{
+    fh.style.display='none';
+  }
+}
+
+async function addHLFromSel(color){
+  const sel=window.getSelection();
+  const text=sel.toString().trim();
+  if(!text||!curPaper)return;
+  const id=curPaper.id;
+  if(!hls[id])hls[id]=[];
+  // Try to determine page number
+  let pageNum=0;
+  const anchor=sel.anchorNode;
+  if(anchor){
+    const pageEl=anchor.parentElement?.closest('.rt-page');
+    if(pageEl)pageNum=parseInt(pageEl.dataset.page)||0;
+  }
+  hls[id].push({text,page:pageNum,color,note:'',ts:Date.now()});
+  await saveHL(id);renderHLL();
+  // Highlight in reader view
+  applyReaderHL();
+  sel.removeAllRanges();
+  $('float-hl').style.display='none';
+}
+
+function applyReaderHL(){
+  if(!curPaper||!hls[curPaper.id])return;
+  const rt=$('reader-text');
+  const pages=rt.querySelectorAll('.rt-page');
+  pages.forEach(pageEl=>{
+    const pageNum=parseInt(pageEl.dataset.page)||0;
+    const pageHls=hls[curPaper.id].filter(h=>h.page===pageNum||h.page===0);
+    if(!pageHls.length)return;
+    pageEl.querySelectorAll('p').forEach(p=>{
+      let html=p.innerHTML;
+      pageHls.forEach(h=>{
+        const bg=HL_COLORS[h.color]||HL_COLORS.yellow;
+        const escaped=escHTML(h.text).replace(/\s+/g,'\\s+');
+        try{
+          const re=new RegExp(`(${escaped.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\\\\s\\\+/g,'\\s+')})`,'gi');
+          html=html.replace(re,`<mark style="background:${bg};border-radius:2px;color:inherit;padding:1px 0">$1</mark>`);
+        }catch(e){}
+      });
+      p.innerHTML=html;
+    });
+  });
+}
 function toggleHL(){$('hlp').classList.toggle('show')}
 
 // Mobile manual highlight
