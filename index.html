@@ -93,25 +93,23 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 #overlay.show{display:block}
 /* RWD */
 @media(max-width:768px){
-  body{flex-direction:column;height:auto;overflow:auto}
+  body{flex-direction:column!important;height:auto!important;overflow-y:auto!important;overflow-x:hidden!important}
   #mtb{display:flex!important}
-  #sb{position:fixed;left:0;top:0;z-index:50;height:100vh;transform:translateX(-100%);transition:transform .25s ease;width:260px;min-width:0!important}
-  #sb.open{transform:translateX(0)}
-  #mn{padding:16px 14px!important;overflow-y:auto;min-height:0;flex:1}
+  #sb{position:fixed!important;left:0;top:0;z-index:50;height:100vh!important;transform:translateX(-100%);transition:transform .25s ease;width:75vw!important;max-width:280px;min-width:0!important}
+  #sb.open{transform:translateX(0)!important}
+  #mn{padding:16px 14px!important;width:100%!important;min-width:0!important}
   #mn h2{font-size:18px}
   .pc{padding:14px 16px}.pt{font-size:14px}.pn{font-size:12px}
   .phase-grid{grid-template-columns:1fr}
   .prg{grid-template-columns:1fr}
-  /* Reader mobile */
-  #rd{position:fixed;inset:0;z-index:60}
+  #rd{position:fixed!important;inset:0;z-index:60}
   #rtb{padding:6px 10px;gap:4px;overflow-x:auto}
   #rtb button,#rtb select{font-size:10px;padding:4px 8px}
   #rbd{flex-direction:column}
   #pdfbox{padding:8px}
-  #hlp{position:fixed;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:50vh;z-index:65;border-left:none;border-top:1px solid var(--bd);border-radius:12px 12px 0 0}
+  #hlp{position:fixed!important;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:50vh;z-index:65;border-left:none!important;border-top:1px solid var(--bd);border-radius:12px 12px 0 0}
   #uz{padding:16px}
   .da{padding:30px 20px}.da h3{font-size:14px}
-  /* Touch targets */
   .nb{padding:12px 10px;font-size:13px}
   .lb,.rb{padding:6px 14px;font-size:11px}
   .cb{width:28px;height:28px}
@@ -443,10 +441,13 @@ async function addHL(color){
   const id=curPaper.id;
   if(!hls[id])hls[id]=[];
   hls[id].push({text:selInfo.text,page:selInfo.page,color,note:'',ts:Date.now()});
-  console.log('Added highlight:',selInfo.text.slice(0,50),'color:',color,'total:',hls[id].length);
   await saveHL(id);renderHLL();
   $('sp').style.display='none';window.getSelection().removeAllRanges();
-  renderPg(pg);
+  // Re-render only if needed, preserving scroll position
+  const box=$('pdfbox');
+  const scrollY=box.scrollTop;
+  await renderPg(pg);
+  box.scrollTop=scrollY;
 }
 
 const HL_COLORS={yellow:'rgba(255,235,59,0.35)',green:'rgba(76,175,80,0.35)',pink:'rgba(233,30,99,0.3)',blue:'rgba(33,150,243,0.3)'};
@@ -458,40 +459,55 @@ function applyHL(pageN,tl){
   const spans=Array.from(tl.querySelectorAll('span'));
   if(!spans.length)return;
 
-  // Build full page text with character→span mapping
+  // Build char offset map: for each span, its start offset in fullText
   let fullText='';
-  const charToSpan=[]; // charToSpan[i] = span index
+  const spanOffsets=[]; // {start, end, span}
   spans.forEach((sp,si)=>{
     const t=sp.textContent;
-    for(let j=0;j<t.length;j++){
-      charToSpan.push(si);
-    }
+    spanOffsets.push({start:fullText.length, end:fullText.length+t.length, si});
     fullText+=t;
   });
 
-  // For each highlight, find its position in fullText and mark spans
   phl.forEach(h=>{
     const needle=h.text.replace(/\s+/g,' ').trim();
-    // Try exact match first
     let idx=fullText.indexOf(needle);
     if(idx===-1){
-      // Try normalized (collapse whitespace in both)
       const normFull=fullText.replace(/\s+/g,' ');
       idx=normFull.indexOf(needle);
     }
     if(idx===-1)return;
-
-    // Find which spans are covered by [idx, idx+needle.length)
-    const spanSet=new Set();
-    for(let i=idx;i<idx+needle.length&&i<charToSpan.length;i++){
-      spanSet.add(charToSpan[i]);
-    }
-    // Apply highlight to those spans only
+    const hlStart=idx, hlEnd=idx+needle.length;
     const bg=HL_COLORS[h.color]||HL_COLORS.yellow;
-    spanSet.forEach(si=>{
-      spans[si].style.backgroundColor=bg;
-      spans[si].style.borderRadius='2px';
-      spans[si].style.opacity='1';
+
+    // Find overlapping spans and split precisely
+    spanOffsets.forEach(({start,end,si})=>{
+      const sp=spans[si];
+      if(hlEnd<=start||hlStart>=end)return; // no overlap
+      const oStart=Math.max(hlStart,start)-start; // offset within span
+      const oEnd=Math.min(hlEnd,end)-start;
+      const text=sp.textContent;
+
+      if(oStart===0&&oEnd===text.length){
+        // Entire span highlighted
+        sp.style.backgroundColor=bg;
+        sp.style.borderRadius='2px';
+        sp.style.opacity='1';
+      }else{
+        // Partial: split into text nodes + highlighted span
+        const before=text.substring(0,oStart);
+        const mid=text.substring(oStart,oEnd);
+        const after=text.substring(oEnd);
+        sp.textContent='';
+        if(before)sp.appendChild(document.createTextNode(before));
+        const mark=document.createElement('span');
+        mark.textContent=mid;
+        mark.style.backgroundColor=bg;
+        mark.style.borderRadius='2px';
+        mark.style.color='transparent';
+        sp.appendChild(mark);
+        if(after)sp.appendChild(document.createTextNode(after));
+        sp.style.opacity='1';
+      }
     });
   });
 }
@@ -514,7 +530,7 @@ function renderHLL(){
 
 async function noteHL(i){const n=prompt('輸入筆記：',hls[curPaper.id][i].note||'');if(n!==null){hls[curPaper.id][i].note=n;await saveHL(curPaper.id);renderHLL()}}
 function goPg(p){pg=p;renderPg(pg)}
-async function delHL(i){hls[curPaper.id].splice(i,1);await saveHL(curPaper.id);renderHLL();if(pdf)renderPg(pg)}
+async function delHL(i){hls[curPaper.id].splice(i,1);await saveHL(curPaper.id);renderHLL();if(pdf){const s=$('pdfbox').scrollTop;await renderPg(pg);$('pdfbox').scrollTop=s}}
 
 // ===== STORAGE (Supabase) =====
 async function saveHL(paperId){
