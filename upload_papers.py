@@ -124,3 +124,28 @@ if __name__ == "__main__":
     print(f"目標 Supabase bucket: {BUCKET}")
     print(f"論文數量: {len(PAPERS)}\n")
     main()
+
+    # 掃描 pdfs/ 資料夾，上傳所有尚未處理的 PDF
+    print("\n" + "=" * 50)
+    print("📂 掃描 pdfs/ 資料夾尋找手動下載的 PDF...\n")
+    if os.path.isdir("pdfs"):
+        sb2 = create_client(SB_URL, SB_KEY)
+        for f in sorted(os.listdir("pdfs")):
+            if not f.endswith(".pdf"):
+                continue
+            paper_id = f.replace(".pdf", "")
+            remote_path = f"{paper_id}.pdf"
+            local_path = f"pdfs/{f}"
+            print(f"  ⬆️  上傳 {paper_id} ({os.path.getsize(local_path) / 1024:.0f} KB) ...")
+            try:
+                with open(local_path, "rb") as fh:
+                    sb2.storage.from_(BUCKET).upload(
+                        remote_path,
+                        fh.read(),
+                        file_options={"content-type": "application/pdf", "upsert": "true"},
+                    )
+                print(f"      ✅ 上傳成功")
+            except Exception as e:
+                print(f"      ❌ {e}")
+    else:
+        print("  pdfs/ 資料夾不存在")
