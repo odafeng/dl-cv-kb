@@ -92,6 +92,11 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 .rt.done span{text-decoration:line-through;opacity:.45}
 .ro{font-size:11px;font-weight:700;color:var(--ac);background:var(--acs);display:inline-block;padding:3px 10px;border-radius:5px;margin-top:6px}
 .loading{text-align:center;padding:40px;color:var(--mt);font-size:13px}
+/* Chapter detail */
+.ch-sec{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:14px 16px;margin-bottom:10px}
+.ch-label{font-size:11px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.ch-body{font-size:13px;color:var(--t2);line-height:1.7}
+.ch-item{font-size:12.5px;color:var(--t2);line-height:1.6;padding:2px 0}
 /* Reader text mode */
 #reader-text{-webkit-overflow-scrolling:touch}
 .rt-page{max-width:640px;margin:0 auto 24px;padding:20px;background:var(--card);border-radius:10px;border:1px solid var(--bd)}
@@ -291,6 +296,72 @@ function showS(s){view=`s_${s}`;curPaper=null;$('mn').style.display='block';$('r
 
 // ===== RENDER =====
 function $(id){return document.getElementById(id)}
+
+// ===== CHAPTER PLANS =====
+const CHP=[
+{n:1,t:"手術階段辨識",sub:"基礎層",color:"#6688ff",
+ q:"在機器人全直腸繫膜切除術（robotic TME）影片中，如何自動辨識手術所處階段？",
+ bg:"目前手術階段辨識研究集中在腹腔鏡膽囊切除術（Cholec80），尚無專門針對機器人 TME 的階段辨識資料集。TME 手術更長、更複雜，涉及深部骨盆解剖，且手術視野變化大。",
+ data:[
+  "約 100 台達文西機器人 TME 手術影片（高雄榮總）",
+  "9 階段標註架構 v0.1：Abdominal inspection → IMA/IMV ligation → Medial-to-lateral dissection → Lateral mobilization → Splenic flexure → Posterior TME → Anterior-lateral TME → Rectal transection → Reconstruction",
+  "逐幀標註（1 fps 取樣），由大腸直腸外科專科醫師標註",
+  "訓練/驗證/測試切分：70/10/20（依手術分），外部驗證視資料量決定",
+ ],
+ method:[
+  "二階段架構：Spatial backbone → Temporal head",
+  "Spatial backbone 候選：SurgeNetXL（CAFormer, 470萬幀預訓練）、LemonFM（CVPR 2026, 直接提供 phase fine-tuning script）",
+  "Temporal head 候選：TeCNO（基線, causal MS-TCN）、MuST（PhaKIR 2024 冠軍, multi-scale Transformer）、DACAT（SOTA, dual-stream adaptive）",
+  "基線對照：ImageNet ResNet50 + TeCNO",
+  "消融實驗：backbone 效果、temporal head 比較、預訓練策略",
+ ],
+ metrics:["Accuracy","Phase-wise F1（macro & per-phase）","Jaccard index","Precision / Recall per phase","推論速度（FPS）"],
+ risks:["標註一致性：inter-rater agreement 需量化","資料量：100 台可能不足以訓練大型 temporal model → 遷移學習 + 資料增強","phase imbalance：Phase 1, 8, 9 可能極短 → weighted loss"],
+ out:"全球首個機器人 TME 階段辨識基準，含公開的 9-phase schema 與基線結果",
+ papers:["surgenetxl","lemon","tecno","must","dacat","surgbench","phakir"],
+ timeline:"PhD Year 1（2026 Q3–Q4）"},
+{n:2,t:"切割平面辨識",sub:"核心貢獻",color:"#78dca0",
+ q:"能否即時分割出 TME 手術中的 holy plane、直腸繫膜筋膜（mesorectal fascia）與骨盆壁筋膜（parietal pelvic fascia）？",
+ bg:"正確的筋膜平面解剖是 TME 手術品質的核心。Igaki 2022 首次嘗試疏鬆結締組織分割（DSC ~0.54），Igaki 2025 擴展至三區域分割（Holy plane DSC 68.5%）。Kolbinger 2024 在機器人直腸切除中分割 16 種結構但無血管平面 F1 僅 0.54。現有研究均受限於小資料集與單一術式。",
+ data:[
+  "從 Chapter 1 標註完成的影片中選取骨盆解剖階段片段",
+  "像素級標註：3 類（直腸繫膜筋膜、骨盆壁筋膜、Holy plane）",
+  "標註策略：SAM/SAM2 輔助初始標註 → 大腸直腸外科專科醫師逐張校正",
+  "預估 2000–3000 張標註影像（來自 ~60–80 台手術）",
+ ],
+ method:[
+  "語意分割架構：U-Net / DeepLabv3+ / SegFormer",
+  "Backbone 比較：SurgeNetXL（手術預訓練）vs ImageNet（通用預訓練）",
+  "嘗試半監督學習：用未標註幀增強訓練",
+  "後處理：temporal smoothing（利用影片連續性減少閃爍）",
+ ],
+ metrics:["Dice Similarity Coefficient (DSC) per class","Normalized Surface Distance (NSD)","Boundary F1","各區域分開報告 + 整體 mean DSC"],
+ risks:["Holy plane 邊界模糊 → DSC 可能偏低（Igaki 2025 報告 68.5%）","標註者間一致性：需要至少 2 位外科醫師雙盲標註子集","類別不平衡：holy plane 佔畫面比例小 → focal loss + 過採樣"],
+ out:"機器人 TME 最佳平面分割結果，超越 Igaki 2025 的三區域 DSC",
+ papers:["igaki2022","igaki2025","kolbinger","kumazu","surgenetxl"],
+ timeline:"PhD Year 2（2027 Q1–Q2）"},
+{n:3,t:"階段感知導航",sub:"整合應用",color:"#ffb464",
+ q:"將階段辨識與平面分割整合後，能否透過「僅在骨盆解剖階段啟動平面分割」來降低誤報率並實現即時導航？",
+ bg:"手術中全程運行分割模型會產生大量誤報（在非相關階段偵測到偽陽性平面）。Kolbinger 2024 提出情境感知概念但未真正整合階段辨識。本研究首次將兩個模組串聯：Phase Recognition → 骨盆解剖啟動 → Plane Segmentation。",
+ data:[
+  "使用 Chapter 1 的階段辨識模型 + Chapter 2 的平面分割模型",
+  "完整手術影片端對端測試（不再只是片段）",
+  "臨床回饋：外科醫師操作評估問卷",
+ ],
+ method:[
+  "管線架構：Phase model 持續推論 → 偵測到 Phase 6/7 時啟動 Segmentation model",
+  "評估策略 A：Phase-aware（僅 Phase 6/7 啟動）vs Always-on（全程啟動）",
+  "評估策略 B：不同 phase prediction 延遲容忍度的影響",
+  "效能評估：延遲（latency）、GPU 記憶體、FPS",
+  "達文西研究控制台展示：即時 overlay 視覺化",
+ ],
+ metrics:["誤報率（FP/min）比較：Phase-aware vs Always-on","整體系統 Dice（端對端）","推論延遲（ms per frame）","外科醫師主觀評分（NASA-TLX 或自訂量表）"],
+ risks:["Phase 辨識延遲可能導致 Segmentation 啟動過慢 → 評估 grace period","即時推論需要模型輕量化 → 可能犧牲準確度","IRB 審查：即時展示給外科醫師需要額外倫理核准"],
+ out:"情境感知 TME 導航系統，證明 phase-aware activation 降低誤報率",
+ papers:["kolbinger","surgenetxl","surgvista"],
+ timeline:"PhD Year 2–3（2027 Q3–2028 Q1）"},
+];
+
 function renderP(id){
   const m=$('mn');
   if(id==='overview'){
@@ -298,9 +369,7 @@ function renderP(id){
     <div style="font-size:20px;font-weight:800;margin-bottom:3px">機器人全直腸繫膜切除術之手術影像分析</div>
     <div style="font-size:12px;color:var(--mt);margin-bottom:18px">博士論文 — 成功大學資工系</div>
     <div style="font-size:13px;font-weight:700;margin-bottom:8px">論文架構</div>
-    ${[["1","手術階段辨識","利用時序模型辨識機器人 TME 手術影像中的手術階段","基礎層"],
-    ["2","切割平面辨識","即時分割 holy plane、直腸繫膜筋膜、骨盆壁筋膜","核心貢獻"],
-    ["3","階段感知導航","僅在骨盆解剖階段啟動平面分割，降低誤報率","整合應用"]].map(([n,t,d,s])=>`<div class="pc" style="display:flex;align-items:center;gap:12px"><div class="phase-num">${n}</div><div><div style="font-weight:700;font-size:13px">${t} <span style="font-size:9px;color:var(--ac);background:var(--acs);padding:2px 7px;border-radius:10px;margin-left:5px">${s}</span></div><div style="font-size:11.5px;color:var(--t2);margin-top:1px">${d}</div></div></div>`).join('')}
+    ${CHP.map(ch=>`<div class="pc" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="showChapter(${ch.n})"><div class="phase-num" style="color:${ch.color};background:${ch.color}18">${ch.n}</div><div style="flex:1"><div style="font-weight:700;font-size:13px">${ch.t} <span style="font-size:9px;color:var(--ac);background:var(--acs);padding:2px 7px;border-radius:10px;margin-left:5px">${ch.sub}</span></div><div style="font-size:11.5px;color:var(--t2);margin-top:1px">${ch.q.slice(0,50)}...</div></div><span style="color:var(--mt);font-size:14px">›</span></div>`).join('')}
     <div style="font-size:13px;font-weight:700;margin:16px 0 8px">競爭優勢</div>
     <div class="pc">${["約100台達文西TME影像＋9階段標註","全球首個機器人TME階段辨識資料集","大腸直腸外科專科醫師擔任專家標註者","結合ctpelvimetry術前評估＋PostOp PWA術後照護"].map(a=>`<div style="display:flex;gap:7px;margin-bottom:4px"><span style="color:var(--ac);font-weight:700;font-size:12px">→</span><span style="font-size:12px;color:var(--t2)">${a}</span></div>`).join('')}</div>`;
   }else if(id==='phases'){
@@ -355,6 +424,53 @@ function renderP(id){
     m.innerHTML=`<h2>🗺️ 論文路線圖</h2>${chs.map(ch=>`<div class="rc"><h3><span class="rn" style="background:${ch.bg};color:${ch.c}">${ch.n}</span>${ch.t}</h3>${ch.tasks.map((t,j)=>`<div class="rt" id="ck_road_${ch.n}_${j}"><input type="checkbox" data-ck="road_${ch.n}_${j}" onchange="toggleCk(this)"><span>${t}</span></div>`).join('')}<div class="ro">預期產出：${ch.out}</div></div>`).join('')}`;
     applyCkState();
   }
+}
+
+function showChapter(n){
+  const ch=CHP.find(c=>c.n===n);if(!ch)return;
+  const sec=(title,items,type)=>{
+    if(type==='list')return `<div class="ch-sec"><div class="ch-label">${title}</div>${items.map(i=>`<div class="ch-item">• ${i}</div>`).join('')}</div>`;
+    return `<div class="ch-sec"><div class="ch-label">${title}</div><div class="ch-body">${items}</div></div>`;
+  };
+  const relPapers=ch.papers.map(pid=>P.find(p=>p.id===pid)).filter(Boolean);
+  $('mn').innerHTML=`
+    <button class="lb" onclick="showP('overview')" style="margin-bottom:14px">← 返回概覽</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div class="phase-num" style="width:40px;height:40px;font-size:18px;color:${ch.color};background:${ch.color}18">${ch.n}</div>
+      <div><div style="font-size:20px;font-weight:800">${ch.t}</div><div style="font-size:11px;color:var(--mt)">${ch.sub} · ${ch.timeline}</div></div>
+    </div>
+    ${sec('研究問題',ch.q,'text')}
+    ${sec('背景',ch.bg,'text')}
+    ${sec('資料',ch.data,'list')}
+    ${sec('方法',ch.method,'list')}
+    ${sec('評估指標',ch.metrics,'list')}
+    ${sec('風險與對策',ch.risks,'list')}
+    ${sec('預期產出',ch.out,'text')}
+    <div class="ch-sec"><div class="ch-label">相關文獻</div>${relPapers.map(p=>`<div class="ch-item" style="cursor:pointer" onclick="showS('${p.s}')"><span style="color:var(--ac);font-weight:700">${p.t}</span> <span style="color:var(--mt);font-size:11px">— ${p.a}, ${p.v}</span></div>`).join('')}</div>
+    <button class="lb rb" onclick="downloadChapterMD(${ch.n})" style="margin-top:16px;padding:8px 18px;font-size:12px">⬇ 下載 Markdown</button>`;
+}
+
+function downloadChapterMD(n){
+  const ch=CHP.find(c=>c.n===n);if(!ch)return;
+  let md=`# Chapter ${ch.n}：${ch.t}\n\n`;
+  md+=`> ${ch.sub} · ${ch.timeline}\n\n`;
+  md+=`## 研究問題\n\n${ch.q}\n\n`;
+  md+=`## 背景\n\n${ch.bg}\n\n`;
+  md+=`## 資料\n\n${ch.data.map(d=>`- ${d}`).join('\n')}\n\n`;
+  md+=`## 方法\n\n${ch.method.map(m=>`- ${m}`).join('\n')}\n\n`;
+  md+=`## 評估指標\n\n${ch.metrics.map(m=>`- ${m}`).join('\n')}\n\n`;
+  md+=`## 風險與對策\n\n${ch.risks.map(r=>`- ${r}`).join('\n')}\n\n`;
+  md+=`## 預期產出\n\n${ch.out}\n\n`;
+  md+=`## 相關文獻\n\n`;
+  ch.papers.forEach(pid=>{
+    const p=P.find(pp=>pp.id===pid);
+    if(p)md+=`- **${p.t}** — ${p.a}, ${p.v}${p.doi?` (DOI: ${p.doi})`:''}\n`;
+  });
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`chapter${ch.n}_${ch.t}.md`;
+  a.click();
 }
 
 function renderS(sec){
