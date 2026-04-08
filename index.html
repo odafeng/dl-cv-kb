@@ -44,6 +44,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 .pgw canvas{display:block}
 .tl{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;line-height:1;text-size-adjust:none;-webkit-text-size-adjust:none}
 .tl span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.tl span[style*="background"]{opacity:1!important}
 .tl .hl{border-radius:2px}.tl .hl.yellow{background:var(--hy)}.tl .hl.green{background:var(--hg)}.tl .hl.pink{background:var(--hp)}.tl .hl.blue{background:var(--hb)}
 .tl ::selection{background:rgba(102,136,255,.4)}
 #uz{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:30px}
@@ -383,7 +384,35 @@ async function renderPg(n){
   const tl=document.createElement('div');tl.className='tl';
   tl.style.width=vp.width+'px';tl.style.height=vp.height+'px';
   w.appendChild(tl);
-  await pdfjsLib.renderTextLayer({textContentSource:tc,container:tl,viewport:vp}).promise;
+  try{
+    // Try pdf.js 3.x API
+    const tlTask=pdfjsLib.renderTextLayer({textContentSource:tc,container:tl,viewport:vp});
+    await tlTask.promise;
+  }catch(e1){
+    try{
+      // Fallback: older API
+      const tlTask=pdfjsLib.renderTextLayer({textContent:tc,container:tl,viewport:vp});
+      await tlTask.promise;
+    }catch(e2){
+      // Manual fallback
+      console.warn('renderTextLayer failed, using manual placement',e2);
+      tc.items.forEach(it=>{
+        if(!it.str.trim())return;
+        const sp=document.createElement('span');
+        const tx=pdfjsLib.Util.transform(vp.transform,it.transform);
+        sp.textContent=it.str;
+        sp.style.position='absolute';
+        sp.style.left=tx[4]+'px';
+        sp.style.top=(vp.height-tx[5])+'px';
+        sp.style.fontSize=Math.abs(tx[0])+'px';
+        sp.style.color='transparent';
+        sp.style.whiteSpace='pre';
+        if(it.width)sp.style.width=(it.width*vp.scale)+'px';
+        tl.appendChild(sp);
+      });
+    }
+  }
+  console.log('Text layer spans:',tl.querySelectorAll('span').length);
   c.appendChild(w);
   $('pgi').textContent=`${n} / ${pdf.numPages}`;
   applyHL(n,tl);
@@ -411,19 +440,35 @@ async function addHL(color){
   const id=curPaper.id;
   if(!hls[id])hls[id]=[];
   hls[id].push({text:selInfo.text,page:selInfo.page,color,note:'',ts:Date.now()});
+  console.log('Added highlight:',selInfo.text.slice(0,50),'color:',color,'total:',hls[id].length);
   await saveHL(id);renderHLL();
   $('sp').style.display='none';window.getSelection().removeAllRanges();
   renderPg(pg);
 }
 
+const HL_COLORS={yellow:'rgba(255,235,59,0.35)',green:'rgba(76,175,80,0.35)',pink:'rgba(233,30,99,0.3)',blue:'rgba(33,150,243,0.3)'};
+
 function applyHL(pageN,tl){
   if(!curPaper||!hls[curPaper.id])return;
   const phl=hls[curPaper.id].filter(h=>h.page===pageN);
-  const spans=tl.querySelectorAll('span');
+  if(!phl.length)return;
+  console.log('Applying',phl.length,'highlights to page',pageN);
+  // Collect all span text for matching
+  const spans=Array.from(tl.querySelectorAll('span'));
   phl.forEach(h=>{
+    const hlText=h.text.replace(/\s+/g,' ').trim();
+    // Try exact span match first
     spans.forEach(sp=>{
       const t=sp.textContent.trim();
-      if(t&&h.text.includes(t)&&t.length>1){sp.classList.add('hl',h.color)}
+      if(!t||t.length<2)return;
+      // Match: span text is part of highlight, or highlight is part of span
+      if(hlText.includes(t)||t.includes(hlText)){
+        sp.style.backgroundColor=HL_COLORS[h.color]||HL_COLORS.yellow;
+        sp.style.borderRadius='2px';
+        sp.style.opacity='1';
+        sp.style.mixBlendMode='multiply';
+        console.log('Highlight matched span:',t.slice(0,30));
+      }
     });
   });
 }
