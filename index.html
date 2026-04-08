@@ -335,8 +335,9 @@ async function openR(id){
     // Hide desktop-only toolbar buttons
     document.querySelectorAll('.desktop-only').forEach(el=>el.style.display='none');
     const url=`${SB_PUBLIC}/${id}.pdf`;
+    const viewerUrl=`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
     $('uz').style.display='none';
-    $('pdf-iframe').src=url;
+    $('pdf-iframe').src=viewerUrl;
     $('pdf-iframe').style.display='flex';
     $('hlp').classList.add('show');
     renderHLL();
