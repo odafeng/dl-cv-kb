@@ -80,8 +80,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 .rc{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px 18px;margin-bottom:12px}
 .rc h3{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:9px}
 .rn{width:32px;height:32px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
-.rt{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:12.5px;color:var(--t2);line-height:1.45}
-.rt::before{content:"";width:14px;height:14px;border:2px solid var(--bd);border-radius:3px;flex-shrink:0;margin-top:2px;display:block}
+.rt{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:12.5px;color:var(--t2);line-height:1.45;cursor:pointer}
+.rt input[type=checkbox]{width:15px;height:15px;margin-top:2px;flex-shrink:0;accent-color:var(--ac);cursor:pointer}
+.rt.done{text-decoration:line-through;opacity:.5}
 .ro{font-size:11px;font-weight:700;color:var(--ac);background:var(--acs);display:inline-block;padding:3px 10px;border-radius:5px;margin-top:6px}
 .loading{text-align:center;padding:40px;color:var(--mt);font-size:13px}
 /* Mobile topbar */
@@ -92,11 +93,11 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 #overlay.show{display:block}
 /* RWD */
 @media(max-width:768px){
-  body{flex-direction:column}
+  body{flex-direction:column;height:auto;overflow:auto}
   #mtb{display:flex!important}
-  #sb{position:fixed;left:0;top:0;z-index:50;height:100vh;transform:translateX(-100%);transition:transform .25s ease;width:260px}
+  #sb{position:fixed;left:0;top:0;z-index:50;height:100vh;transform:translateX(-100%);transition:transform .25s ease;width:260px;min-width:0!important}
   #sb.open{transform:translateX(0)}
-  #mn{padding:16px 14px!important;overflow-y:auto;flex:1}
+  #mn{padding:16px 14px!important;overflow-y:auto;min-height:0;flex:1}
   #mn h2{font-size:18px}
   .pc{padding:14px 16px}.pt{font-size:14px}.pn{font-size:12px}
   .phase-grid{grid-template-columns:1fr}
@@ -237,7 +238,7 @@ function renderP(id){
   if(id==='overview'){
     m.innerHTML=`<h2>🎯 論文概覽</h2>
     <div style="font-size:20px;font-weight:800;margin-bottom:3px">機器人全直腸繫膜切除術之手術影像分析</div>
-    <div style="font-size:12px;color:var(--mt);margin-bottom:18px">博士論文 — 成功大學資工系 · 指導教授：蔣榮先</div>
+    <div style="font-size:12px;color:var(--mt);margin-bottom:18px">博士論文 — 成功大學資工系</div>
     <div style="font-size:13px;font-weight:700;margin-bottom:8px">論文架構</div>
     ${[["1","手術階段辨識","利用時序模型辨識機器人 TME 手術影像中的手術階段","基礎層"],
     ["2","切割平面辨識","即時分割 holy plane、直腸繫膜筋膜、骨盆壁筋膜","核心貢獻"],
@@ -270,7 +271,7 @@ function renderP(id){
       {stage:"第一階段：掌握 backbone + temporal head",items:["SurgeNetXL 或 LemonFM 當 frame encoder","TeCNO 當 temporal head","先 reproduce → 再跑自己的 TME data"],note:"最容易收斂、debug、寫出第一篇 paper。"},
       {stage:"第二階段：比較 temporal modeling",items:["TeCNO vs MuST vs Surgformer","回答：TCN 類 vs Transformer 類對你的 9-phase TME 哪個最好","這步的研究訊號比追巨型 FM 更高"],note:""},
       {stage:"第三階段：探索 video-native FM",items:["SurgVISTA probing / fine-tuning","SurgMotion（如果已公開 weights）","問題變成：video-native pretraining 在 robotic TME 有額外收益嗎？"],note:"這是頂刊等級的方法學問題。"},
-    ].map(s=>`<div class="rc"><h3 style="font-size:14px">${s.stage}</h3>${s.items.map(i=>`<div class="rt">${i}</div>`).join('')}${s.note?`<div style="font-size:11px;color:var(--t2);margin-top:6px;padding-left:22px">${s.note}</div>`:''}</div>`).join('')}
+    ].map((s,si)=>`<div class="rc"><h3 style="font-size:14px">${s.stage}</h3>${s.items.map((i,j)=>`<div class="rt" id="ck_learn_${si}_${j}"><input type="checkbox" data-ck="learn_${si}_${j}" onchange="toggleCk(this)"><span>${i}</span></div>`).join('')}${s.note?`<div style="font-size:11px;color:var(--t2);margin-top:6px;padding-left:22px">${s.note}</div>`:''}</div>`).join('')}
     <div style="font-size:13px;font-weight:700;margin:16px 0 8px">建議第一版實驗配置</div>
     <div class="pc" style="font-size:12px;color:var(--t2);line-height:1.7">
     <b style="color:var(--t)">Backbone</b>：SurgeNetXL 或 LemonFM<br>
@@ -278,6 +279,7 @@ function renderP(id){
     <b style="color:var(--t)">對照組</b>：MuST 或 Surgformer<br>
     <b style="color:var(--t)">高階延伸</b>：SurgVISTA probing / fine-tuning
     </div>`;
+    applyCkState();
   }else if(id==='prereqs'){
     const cats=[
       ["深度學習基礎",["CNN（ResNet, EfficientNet, ConvNeXt, CAFormer）","Transformer / 自注意力機制","自監督學習（DINO, MAE, V-JEPA, 對比學習）","遷移學習與微調策略","語意分割（U-Net, DeepLabv3+, FPN, SegFormer）"]],
@@ -292,7 +294,8 @@ function renderP(id){
       {n:2,c:"#78dca0",bg:"rgba(120,220,160,.12)",t:"Holy Plane 與筋膜平面分割",tasks:["標註架構：直腸繫膜 / 骨盆壁 / Holy plane","像素級標註（SAM輔助→專家校正）","分割模型基準測試","SurgeNetXL vs ImageNet backbone","DSC, NSD, 各區域準確度"],out:"機器人TME最佳平面分割結果"},
       {n:3,c:"#ffb464",bg:"rgba(255,180,100,.12)",t:"階段感知平面導航",tasks:["整合階段辨識與平面分割","僅骨盆解剖階段啟動","評估階段感知降低誤報","達文西即時推論展示","外科醫師回饋研究"],out:"情境感知 TME 導航系統"},
     ];
-    m.innerHTML=`<h2>🗺️ 論文路線圖</h2>${chs.map(ch=>`<div class="rc"><h3><span class="rn" style="background:${ch.bg};color:${ch.c}">${ch.n}</span>${ch.t}</h3>${ch.tasks.map(t=>`<div class="rt">${t}</div>`).join('')}<div class="ro">預期產出：${ch.out}</div></div>`).join('')}`;
+    m.innerHTML=`<h2>🗺️ 論文路線圖</h2>${chs.map(ch=>`<div class="rc"><h3><span class="rn" style="background:${ch.bg};color:${ch.c}">${ch.n}</span>${ch.t}</h3>${ch.tasks.map((t,j)=>`<div class="rt" id="ck_road_${ch.n}_${j}"><input type="checkbox" data-ck="road_${ch.n}_${j}" onchange="toggleCk(this)"><span>${t}</span></div>`).join('')}<div class="ro">預期產出：${ch.out}</div></div>`).join('')}`;
+    applyCkState();
   }
 }
 
@@ -528,6 +531,37 @@ async function loadHL(paperId){
   }catch(e){hls[paperId]=[]}
   renderHLL();
 }
+
+// ===== CHECKBOXES =====
+let ckState={};
+async function loadCkState(){
+  try{
+    const{data}=await sb.storage.from(BUCKET).download('checkboxes.json');
+    if(data)ckState=JSON.parse(await data.text());
+  }catch(e){ckState={}}
+}
+async function saveCkState(){
+  try{
+    const blob=new Blob([JSON.stringify(ckState)],{type:'application/json'});
+    await sb.storage.from(BUCKET).upload('checkboxes.json',blob,{upsert:true,contentType:'application/json'});
+  }catch(e){console.warn('Save ck:',e)}
+}
+function toggleCk(el){
+  const key=el.dataset.ck;
+  ckState[key]=el.checked;
+  el.closest('.rt').classList.toggle('done',el.checked);
+  saveCkState();
+}
+function applyCkState(){
+  document.querySelectorAll('.rt input[type=checkbox]').forEach(el=>{
+    const key=el.dataset.ck;
+    if(ckState[key]){
+      el.checked=true;
+      el.closest('.rt').classList.add('done');
+    }
+  });
+}
+loadCkState();
 
 // ===== KEYBOARD =====
 document.addEventListener('keydown',e=>{
