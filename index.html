@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>博士論文知識庫 — 手術影像分析</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#08080d;--sb:#0e0e16;--card:#13131e;--bd:#1c1c2e;--t:#e6e6f0;--t2:#9898ae;--mt:#606078;--ac:#6688ff;--acs:rgba(102,136,255,.08);--acb:rgba(102,136,255,.25);--tbg:rgba(102,136,255,.1);--ttx:#8aabff;
+--hy:rgba(255,235,59,.3);--hg:rgba(76,175,80,.3);--hp:rgba(233,30,99,.25);--hb:rgba(33,150,243,.25)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);display:flex;height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#2a2a40;border-radius:3px}
+#sb{width:220px;min-width:220px;background:var(--sb);border-right:1px solid var(--bd);padding:14px 10px;overflow-y:auto;flex-shrink:0}
+#sb h1{font-size:15px;font-weight:800;padding:0 8px 2px}
+#sb .sub{font-size:10px;color:var(--mt);padding:0 8px 14px;letter-spacing:.4px}
+.nb{display:flex;align-items:center;gap:7px;width:100%;padding:8px 10px;border:none;border-radius:6px;background:0 0;color:var(--t2);font:500 12.5px/1 inherit;cursor:pointer;text-align:left;transition:.15s;margin-bottom:1px}
+.nb:hover{background:#181828}.nb.on{background:#1a1a30;color:var(--ac);font-weight:700}
+.ns{font-size:9px;color:var(--mt);padding:10px 10px 3px;text-transform:uppercase;letter-spacing:1px;font-weight:700}
+#mn{flex:1;overflow-y:auto;padding:28px 36px}
+#mn h2{font-size:22px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.pc{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px 20px;margin-bottom:12px;transition:border-color .2s}
+.pc:hover{border-color:var(--ac)}
+.pt{font-size:15px;font-weight:700;margin-bottom:2px}.pm{font-size:11.5px;color:var(--mt);margin-bottom:7px}
+.ptg{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.ptg span{font-size:10px;padding:2px 8px;border-radius:14px;background:var(--tbg);color:var(--ttx);font-weight:600}
+.pn{font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px}
+.pl{display:flex;flex-wrap:wrap;gap:5px}
+.lb{font-size:10.5px;font-weight:600;padding:4px 11px;border-radius:6px;background:var(--acs);color:var(--ac);text-decoration:none;border:1px solid var(--acb);transition:.15s;cursor:pointer}
+.lb:hover{background:var(--ac);color:#fff}
+.rb{background:var(--ac)!important;color:#fff!important;border-color:var(--ac)!important}
+
+/* Reader */
+#rd{display:none;flex:1;flex-direction:column;overflow:hidden}
+#rd.show{display:flex}
+#rtb{padding:8px 14px;background:var(--sb);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#rtb button,#rtb select{font:600 11px inherit;padding:4px 10px;border-radius:5px;border:1px solid var(--bd);background:var(--card);color:var(--t);cursor:pointer}
+#rtb button:hover{border-color:var(--ac);color:var(--ac)}
+#rbd{flex:1;display:flex;overflow:hidden}
+#pdfbox{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:16px;background:#14141e;display:none}
+.pgw{position:relative;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.pgw canvas{display:block}
+.tl{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;line-height:1}
+.tl span{position:absolute;color:transparent;white-space:pre;cursor:text}
+.tl .hl{border-radius:2px}.tl .hl.yellow{background:var(--hy)}.tl .hl.green{background:var(--hg)}.tl .hl.pink{background:var(--hp)}.tl .hl.blue{background:var(--hb)}
+.tl ::selection{background:rgba(102,136,255,.35)}
+#uz{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:30px}
+.da{width:100%;max-width:480px;border:2px dashed var(--bd);border-radius:14px;padding:50px 30px;text-align:center;cursor:pointer;transition:.2s}
+.da:hover,.da.dg{border-color:var(--ac)}
+.da h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.da p{font-size:12px;color:var(--t2)}
+#hlp{width:260px;min-width:260px;background:var(--sb);border-left:1px solid var(--bd);overflow-y:auto;padding:12px;display:none}
+#hlp.show{display:block}
+#hlp h3{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--ac)}
+.hi{background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:9px 10px;margin-bottom:7px;font-size:11px}
+.hi .ht{color:var(--t);line-height:1.45;margin-bottom:4px;border-left:3px solid var(--ac);padding-left:7px}
+.hi .hp{color:var(--mt);font-size:10px}.hi .hn{margin-top:4px;font-size:10px;color:var(--t2);font-style:italic}
+.hi .ha{display:flex;gap:4px;margin-top:5px}
+.hi .ha button{font:500 9px inherit;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:0 0;color:var(--mt);cursor:pointer}
+.hi .ha button:hover{color:var(--ac);border-color:var(--ac)}
+#sp{display:none;position:fixed;z-index:999;background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:4px;box-shadow:0 3px 16px rgba(0,0,0,.5)}
+.cb{width:20px;height:20px;border-radius:50%;padding:0;border:2px solid transparent!important;cursor:pointer;margin:2px}
+.cb:hover{border-color:#fff!important}
+/* Phase grid */
+.phase-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px}
+.phase-card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px}
+.phase-num{width:28px;height:28px;border-radius:6px;background:var(--acs);color:var(--ac);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.phase-name{font-size:13px;font-weight:600;line-height:1.4}
+.phase-name-en{font-size:11px;color:var(--t2);margin-top:2px}
+/* Prereqs */
+.prg{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.prc{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:14px}
+.prc h4{font-size:12px;font-weight:700;color:var(--ac);margin-bottom:8px}
+.prc li{font-size:11.5px;color:var(--t2);line-height:1.55;margin-bottom:3px;list-style:none;padding-left:10px;position:relative}
+.prc li::before{content:"•";position:absolute;left:0;color:var(--mt)}
+/* Roadmap */
+.rc{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+.rc h3{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:9px}
+.rn{width:32px;height:32px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
+.rt{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:12.5px;color:var(--t2);line-height:1.45}
+.rt::before{content:"";width:14px;height:14px;border:2px solid var(--bd);border-radius:3px;flex-shrink:0;margin-top:2px;display:block}
+.ro{font-size:11px;font-weight:700;color:var(--ac);background:var(--acs);display:inline-block;padding:3px 10px;border-radius:5px;margin-top:6px}
+.loading{text-align:center;padding:40px;color:var(--mt);font-size:13px}
+</style>
+</head>
+<body>
+<div id="sb"><h1>博士論文知識庫</h1><div class="sub">手術影像分析 · 黃士峯</div><div id="nv"></div></div>
+<div id="mn"></div>
+<div id="rd">
+  <div id="rtb">
+    <button onclick="closeR()">← 返回</button>
+    <span id="rtit" style="font-weight:700;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="prevP()">◀ 上一頁</button>
+    <span id="pgi" style="font-size:11px;color:var(--mt)"></span>
+    <button onclick="nextP()">下一頁 ▶</button>
+    <select id="zs" onchange="chgZ(this.value)"><option value="1">100%</option><option value="1.5" selected>150%</option><option value="2">200%</option><option value="2.5">250%</option></select>
+    <button onclick="toggleHL()">📝 標記面板</button>
+  </div>
+  <div id="rbd">
+    <div id="uz"></div>
+    <div id="pdfbox"></div>
+    <div id="hlp"><h3>📝 我的標記</h3><div id="hll"></div></div>
+  </div>
+</div>
+<div id="sp">
+  <button class="cb" style="background:rgba(255,235,59,.6)" onclick="addHL('yellow')"></button>
+  <button class="cb" style="background:rgba(76,175,80,.5)" onclick="addHL('green')"></button>
+  <button class="cb" style="background:rgba(233,30,99,.45)" onclick="addHL('pink')"></button>
+  <button class="cb" style="background:rgba(33,150,243,.45)" onclick="addHL('blue')"></button>
+</div>
+<script>
+// ===== SUPABASE =====
+const SB_URL='https://krjttzmilwkhqueravlx.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyanR0em1pbHdraHF1ZXJhdmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTg3OTIsImV4cCI6MjA5MTIzNDc5Mn0.shVBF7sZaLTDHXumKT3xUTPbuYOErBCRbIXrNUt_ko8';
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+const BUCKET='phd-papers';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ===== DATA =====
+const P=[
+// Spatial backbones
+{id:"surgenetxl",s:"空間特徵骨幹",t:"SurgeNetXL",a:"Jaspers et al.",v:"MedIA 2026",doi:"10.1016/j.media.2025.103873",gh:"TimJaspers0801/SurgeNet",tg:["CAFormer","DINO","470萬幀","自監督"],n:"目前最強手術空間骨幹。470萬幀、23+術式。建議預設空間編碼器。",pri:1},
+{id:"surgvista",s:"空間特徵骨幹",t:"SurgVISTA",a:"Yang et al.",v:"npj Digit Med 2026",doi:"10.1038/s41746-026-02403-0",ax:"2506.02692",gh:"isyangshu/SurgVISTA",tg:["VideoMAE","影片原生","355萬幀"],n:"首個影片層級手術基礎模型。聯合時空學習，workflow recognition 特強。",pri:2},
+{id:"surgmotion",s:"空間特徵骨幹",t:"SurgMotion",a:"Wu et al.",v:"arXiv 2026",ax:"2602.05638",tg:["V-JEPA","動作引導","1500萬片段"],n:"最新最大。潛在動作預測取代像素重建。15M clips / 3658 hrs / 13+ 解剖區域。",pri:3},
+{id:"lemon",s:"空間特徵骨幹",t:"LEMON / LemonFM",a:"ViSurg-AI",v:"CVPR 2026",gh:"visurg-ai/surg-3m",tg:["Image FM","Phase fine-tune","公開腳本"],n:"手術影像基礎模型，repo 直接提供 phase recognition fine-tuning script。非常實用的 frame encoder。",pri:1},
+{id:"surgrec",s:"空間特徵骨幹",t:"SurgRec",a:"2026 預印本",v:"arXiv 2026",ax:"2603.29966",tg:["MAE","JEPA","10535部","可重現"],n:"可擴展可重現的預訓練方案。方法學參考。"},
+// Temporal heads
+{id:"mstcn",s:"時序建模頭",t:"MS-TCN",a:"Farha & Gall",v:"CVPR 2019",doi:"10.1109/CVPR.2019.00369",gh:"ChinaYi/MS-TCN2",tg:["TCN","膨脹卷積","動作分割"],n:"多階段 TCN 開山之作。所有後續方法的基線。",pri:1},
+{id:"tecno",s:"時序建模頭",t:"TeCNO",a:"Czempiel et al.",v:"MICCAI 2020",doi:"10.1007/978-3-030-59716-0_33",gh:"tobiascz/TeCNO",tg:["MS-TCN變體","手術專用","因果推論"],n:"MS-TCN 適配手術階段辨識。首證 TCN>LSTM。你的主要基線。先 reproduce 這個。",pri:1},
+{id:"transsvnet",s:"時序建模頭",t:"Trans-SVNet",a:"Gao et al.",v:"MICCAI 2021",doi:"10.1007/978-3-030-87202-1_57",ax:"2103.09712",tg:["Transformer","混合嵌入","91fps"],n:"首次引入 Transformer 至手術工作流程。你的第二基線。"},
+{id:"dacat",s:"時序建模頭",t:"DACAT",a:"Yang et al.",v:"ICASSP 2025",doi:"10.1109/ICASSP49660.2025.10890444",gh:"kk42yy/DACAT",tg:["雙流","自適應片段","SOTA"],n:"Cholec80/M2CAI16/AutoLaparo SOTA temporal head。"},
+{id:"lovit",s:"時序建模頭",t:"LoViT",a:"Liu et al.",v:"MedIA 2025",doi:"10.1016/j.media.2024.103366",gh:"MRUIL/LoViT",tg:["長影片","ProbSparse","多尺度"],n:"擅長超長手術影片。多尺度局部＋全域聚合。"},
+{id:"must",s:"時序建模頭",t:"MuST",a:"BCV-Uniandes",v:"MICCAI 2024",gh:"BCV-Uniandes/MuST",tg:["Multi-Scale Transformer","Two-stage","PhaKIR冠軍"],n:"Multi-Scale Transformers for Surgical Phase Recognition。PhaKIR 2024 challenge winning solution。",pri:2},
+{id:"surgformer",s:"時序建模頭",t:"Surgformer",a:"2024",ax:"2408.03867",tg:["階層式時序注意力","手術專用"],n:"Hierarchical temporal attention 針對手術影片設計。"},
+{id:"mosformer",s:"時序建模頭",t:"MoSFormer",a:"2024",tg:["Memory of Surgery","長程依賴"],n:"加入 Memory of Surgery 補足固定 context window 缺點，適合超長手術流程。"},
+// VLM
+{id:"hecvl",s:"視覺語言模型",t:"HecVL",a:"Yuan et al.",v:"MICCAI 2024",doi:"10.1007/978-3-031-72089-5_29",ax:"2405.10075",gh:"CAMMA-public/PeskaVLP",tg:["階層式","零樣本","對比學習"],n:"階層式影片文字預訓練，跨術式零樣本階段辨識。"},
+{id:"peskavlp",s:"視覺語言模型",t:"PeskaVLP",a:"Yuan et al.",v:"NeurIPS 2024 Spotlight",ax:"2410.00263",gh:"CAMMA-public/PeskaVLP",tg:["術式感知","知識增強"],n:"HecVL 進化版。+12.3% accuracy。目前最強手術 VLM。"},
+// Plane recognition
+{id:"igaki2022",s:"切割平面辨識",t:"Igaki — TME 疏鬆結締組織分割",a:"Igaki et al.",v:"DCR 2022",doi:"10.1097/DCR.0000000000002393",tg:["DeepLabv3+","600張","32例"],n:"首篇 TME 平面導航。僅疏鬆結締組織分割。"},
+{id:"kolbinger",s:"切割平面辨識",t:"Kolbinger — 機器人直腸切除情境感知",a:"Kolbinger et al.",v:"EJSO 2024",doi:"10.1016/j.ejso.2023.106996",tg:["DeepLabv3","57台RARR","16結構"],n:"最全面。階段辨識＋16 種結構分割，無血管平面 F1=0.54。"},
+{id:"igaki2025",s:"切割平面辨識",t:"Igaki — 骨盆筋膜三區域分割",a:"Igaki et al.",v:"2025",pmc:"PMC12586929",tg:["FPN+EfficientNetB7","2861張","157例"],n:"最新。直腸繫膜 DSC 90.6%、骨盆壁 90.4%、Holy plane 68.5%。"},
+{id:"kumazu",s:"切割平面辨識",t:"Kumazu — 胃切除 LCTF 分割",a:"Kumazu et al.",v:"Sci Reports 2021",doi:"10.1038/s41598-021-00557-3",tg:["U-Net","結締組織","可遷移"],n:"同概念用於胃切除。已證跨術式遷移可行。"},
+// Benchmark & Challenge
+{id:"surgbench",s:"基準與挑戰",t:"SurgBench",a:"2025",v:"arXiv 2025",ax:"2506.07603",tg:["53M frames","22術式","72 tasks","統一基準"],n:"你的「地圖」。涵蓋 6 大類 72 tasks，不讀這篇容易把 phase recognition 當成整個領域。",pri:1},
+{id:"phakir",s:"基準與挑戰",t:"PhaKIR 2024 Challenge",a:"Multi-center",v:"MedIA 2025",doi:"10.1016/j.media.2025.103501",tg:["跨中心驗證","膽囊切除","泛化能力差"],n:"現實校正器。三醫學中心真實資料，各方法跨中心泛化都不好。影響你的 split 設計與 external validation。",pri:1},
+];
+const SEC_ORDER=["空間特徵骨幹","時序建模頭","視覺語言模型","切割平面辨識","基準與挑戰"];
+const PAGES=[
+{id:"overview",icon:"🎯",t:"論文概覽"},
+{id:"phases",icon:"🔬",t:"9-Phase Schema"},
+{id:"roadmap_learn",icon:"📖",t:"學習路線"},
+{id:"prereqs",icon:"📚",t:"先備知識"},
+{id:"roadmap",icon:"🗺️",t:"論文路線圖"},
+];
+
+let view="overview",curPaper=null,pdf=null,pg=1,zoom=1.5,hls={},selInfo=null;
+
+// ===== NAV =====
+function buildNav(){
+  let h='';
+  PAGES.forEach(p=>{h+=`<button class="nb" data-id="${p.id}" onclick="showP('${p.id}')">${p.icon} ${p.t}</button>`});
+  h+=`<div class="ns">文獻分類</div>`;
+  SEC_ORDER.forEach(s=>{h+=`<button class="nb" data-id="s_${s}" onclick="showS('${s}')">📄 ${s}</button>`});
+  document.getElementById('nv').innerHTML=h;
+}
+function updNav(){
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  const d=view.startsWith('s_')?view:`${view}`;
+  const b=document.querySelector(`.nb[data-id="${d}"]`);
+  if(b)b.classList.add('on');
+}
+function showP(id){view=id;curPaper=null;$('mn').style.display='block';$('rd').classList.remove('show');updNav();renderP(id)}
+function showS(s){view=`s_${s}`;curPaper=null;$('mn').style.display='block';$('rd').classList.remove('show');updNav();renderS(s)}
+
+// ===== RENDER =====
+function $(id){return document.getElementById(id)}
+function renderP(id){
+  const m=$('mn');
+  if(id==='overview'){
+    m.innerHTML=`<h2>🎯 論文概覽</h2>
+    <div style="font-size:20px;font-weight:800;margin-bottom:3px">機器人全直腸繫膜切除術之手術影像分析</div>
+    <div style="font-size:12px;color:var(--mt);margin-bottom:18px">博士論文 — 成功大學資工系 · 指導教授：蔣榮先</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">論文架構</div>
+    ${[["1","手術階段辨識","利用時序模型辨識機器人 TME 手術影像中的手術階段","基礎層"],
+    ["2","切割平面辨識","即時分割 holy plane、直腸繫膜筋膜、骨盆壁筋膜","核心貢獻"],
+    ["3","階段感知導航","僅在骨盆解剖階段啟動平面分割，降低誤報率","整合應用"]].map(([n,t,d,s])=>`<div class="pc" style="display:flex;align-items:center;gap:12px"><div class="phase-num">${n}</div><div><div style="font-weight:700;font-size:13px">${t} <span style="font-size:9px;color:var(--ac);background:var(--acs);padding:2px 7px;border-radius:10px;margin-left:5px">${s}</span></div><div style="font-size:11.5px;color:var(--t2);margin-top:1px">${d}</div></div></div>`).join('')}
+    <div style="font-size:13px;font-weight:700;margin:16px 0 8px">競爭優勢</div>
+    <div class="pc">${["約100台達文西TME影像＋9階段標註","全球首個機器人TME階段辨識資料集","大腸直腸外科專科醫師擔任專家標註者","結合ctpelvimetry術前評估＋PostOp PWA術後照護"].map(a=>`<div style="display:flex;gap:7px;margin-bottom:4px"><span style="color:var(--ac);font-weight:700;font-size:12px">→</span><span style="font-size:12px;color:var(--t2)">${a}</span></div>`).join('')}</div>`;
+  }else if(id==='phases'){
+    const phases=[
+      ["Abdominal inspection / exposure","腹腔探查與暴露"],
+      ["IMA/IMV approach and ligation","下腸繫膜動靜脈處理與結紮"],
+      ["Medial-to-lateral mesocolon dissection","由內向外結腸繫膜分離"],
+      ["Lateral colon mobilization","外側結腸游離"],
+      ["Splenic flexure mobilization","脾彎游離"],
+      ["Posterior / early pelvic TME dissection","後方／早期骨盆 TME 解剖"],
+      ["Anterior-lateral / distal pelvic TME completion","前側方／遠端骨盆 TME 完成"],
+      ["Rectal transection","直腸切斷"],
+      ["Reconstruction / anastomosis","重建／吻合"],
+    ];
+    m.innerHTML=`<h2>🔬 Robotic TME 9-Phase Schema <span style="font-size:12px;color:var(--mt);font-weight:500">v0.1</span></h2>
+    <p style="font-size:12px;color:var(--t2);margin-bottom:14px">自訂的機器人全直腸繫膜切除術 9 階段標註架構，用於手術影片逐幀標註。</p>
+    <div class="phase-grid">${phases.map((p,i)=>`<div class="phase-card"><div class="phase-num">${i+1}</div><div><div class="phase-name">${p[1]}</div><div class="phase-name-en">${p[0]}</div></div></div>`).join('')}</div>
+    <div style="margin-top:16px;font-size:12px;color:var(--t2);line-height:1.6">
+    <div style="font-weight:700;margin-bottom:6px;color:var(--t)">設計說明</div>
+    <p>Phase 6-7 將骨盆 TME 解剖拆為後方（early）與前側方（completion），反映實際手術中 posterior holy plane dissection 先行、anterior/lateral dissection 後續完成的順序。這比單一「pelvic dissection」phase 更能捕捉 plane recognition 的關鍵時刻。</p>
+    </div>`;
+  }else if(id==='roadmap_learn'){
+    m.innerHTML=`<h2>📖 學習路線</h2>
+    <p style="font-size:12px;color:var(--t2);margin-bottom:14px">基於目前公開 repo 成熟度與研究目標排列的優先順序。</p>
+    ${[
+      {stage:"第一階段：掌握 backbone + temporal head",items:["SurgeNetXL 或 LemonFM 當 frame encoder","TeCNO 當 temporal head","先 reproduce → 再跑自己的 TME data"],note:"最容易收斂、debug、寫出第一篇 paper。"},
+      {stage:"第二階段：比較 temporal modeling",items:["TeCNO vs MuST vs Surgformer","回答：TCN 類 vs Transformer 類對你的 9-phase TME 哪個最好","這步的研究訊號比追巨型 FM 更高"],note:""},
+      {stage:"第三階段：探索 video-native FM",items:["SurgVISTA probing / fine-tuning","SurgMotion（如果已公開 weights）","問題變成：video-native pretraining 在 robotic TME 有額外收益嗎？"],note:"這是頂刊等級的方法學問題。"},
+    ].map(s=>`<div class="rc"><h3 style="font-size:14px">${s.stage}</h3>${s.items.map(i=>`<div class="rt">${i}</div>`).join('')}${s.note?`<div style="font-size:11px;color:var(--t2);margin-top:6px;padding-left:22px">${s.note}</div>`:''}</div>`).join('')}
+    <div style="font-size:13px;font-weight:700;margin:16px 0 8px">建議第一版實驗配置</div>
+    <div class="pc" style="font-size:12px;color:var(--t2);line-height:1.7">
+    <b style="color:var(--t)">Backbone</b>：SurgeNetXL 或 LemonFM<br>
+    <b style="color:var(--t)">Temporal head</b>：TeCNO<br>
+    <b style="color:var(--t)">對照組</b>：MuST 或 Surgformer<br>
+    <b style="color:var(--t)">高階延伸</b>：SurgVISTA probing / fine-tuning
+    </div>`;
+  }else if(id==='prereqs'){
+    const cats=[
+      ["深度學習基礎",["CNN（ResNet, EfficientNet, ConvNeXt, CAFormer）","Transformer / 自注意力機制","自監督學習（DINO, MAE, V-JEPA, 對比學習）","遷移學習與微調策略","語意分割（U-Net, DeepLabv3+, FPN, SegFormer）"]],
+      ["影片理解",["時序卷積網路（TCN、膨脹因果卷積）","影片 Transformer（TimeSformer, VideoMAE）","動作分割 vs. 動作辨識","線上（因果）vs. 離線推論"]],
+      ["手術資料科學",["手術工作流程 / 階段辨識範式","二階段流程：spatial backbone + temporal head","手術影片標註工具與協定","Accuracy, F1, Jaccard, Precision, Recall","Cholec80 資料切分與評估協定"]],
+      ["臨床知識",["TME：直腸繫膜筋膜、骨盆壁筋膜、Holy plane","自律神經保留（下腹神經、骨盆神經叢）","Quirke 分級評估 TME 標本品質","手術困難因子：狹窄骨盆、肥胖、CRT","機器人 vs. 腹腔鏡 TME 差異"]],
+    ];
+    m.innerHTML=`<h2>📚 先備知識</h2><div class="prg">${cats.map(([n,items])=>`<div class="prc"><h4>${n}</h4><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`).join('')}</div>`;
+  }else if(id==='roadmap'){
+    const chs=[
+      {n:1,c:"#6688ff",bg:"rgba(102,136,255,.12)",t:"機器人 TME 手術階段辨識",tasks:["定義 9 階段標註架構","標註約100台影片","SurgeNetXL/LemonFM + TeCNO/MuST/DACAT","與 ImageNet ResNet50 基線比較","分析各階段準確度"],out:"全球首個機器人TME階段辨識基準"},
+      {n:2,c:"#78dca0",bg:"rgba(120,220,160,.12)",t:"Holy Plane 與筋膜平面分割",tasks:["標註架構：直腸繫膜 / 骨盆壁 / Holy plane","像素級標註（SAM輔助→專家校正）","分割模型基準測試","SurgeNetXL vs ImageNet backbone","DSC, NSD, 各區域準確度"],out:"機器人TME最佳平面分割結果"},
+      {n:3,c:"#ffb464",bg:"rgba(255,180,100,.12)",t:"階段感知平面導航",tasks:["整合階段辨識與平面分割","僅骨盆解剖階段啟動","評估階段感知降低誤報","達文西即時推論展示","外科醫師回饋研究"],out:"情境感知 TME 導航系統"},
+    ];
+    m.innerHTML=`<h2>🗺️ 論文路線圖</h2>${chs.map(ch=>`<div class="rc"><h3><span class="rn" style="background:${ch.bg};color:${ch.c}">${ch.n}</span>${ch.t}</h3>${ch.tasks.map(t=>`<div class="rt">${t}</div>`).join('')}<div class="ro">預期產出：${ch.out}</div></div>`).join('')}`;
+  }
+}
+
+function renderS(sec){
+  const papers=P.filter(p=>p.s===sec);
+  $('mn').innerHTML=`<h2>📄 ${sec}</h2>${papers.map(pcHTML).join('')}`;
+}
+
+function pcHTML(p){
+  const lk=[];
+  if(p.doi)lk.push(`<a class="lb" href="https://doi.org/${p.doi}" target="_blank">DOI↗</a>`);
+  if(p.ax)lk.push(`<a class="lb" href="https://arxiv.org/abs/${p.ax}" target="_blank">arXiv↗</a>`);
+  if(p.gh)lk.push(`<a class="lb" href="https://github.com/${p.gh}" target="_blank">GitHub↗</a>`);
+  if(p.pmc)lk.push(`<a class="lb" href="https://pmc.ncbi.nlm.nih.gov/articles/${p.pmc}/" target="_blank">PMC↗</a>`);
+  lk.push(`<button class="lb rb" onclick="openR('${p.id}')">📖 閱讀 & 標記</button>`);
+  const priTag=p.pri?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${p.pri===1?'rgba(255,180,100,.15)':'rgba(120,220,160,.12)'};color:${p.pri===1?'#ffb464':'#78dca0'};font-weight:700;margin-left:6px">${p.pri===1?'必讀':'推薦'}</span>`:'';
+  return `<div class="pc"><div class="pt">${p.t}${priTag}</div><div class="pm">${p.a} — ${p.v}</div><div class="ptg">${p.tg.map(t=>`<span>${t}</span>`).join('')}</div><div class="pn">${p.n}</div><div class="pl">${lk.join('')}</div></div>`;
+}
+
+// ===== PDF READER =====
+async function openR(id){
+  curPaper=P.find(p=>p.id===id);if(!curPaper)return;
+  $('mn').style.display='none';$('rd').classList.add('show');
+  $('rtit').textContent=curPaper.t;
+  $('pdfbox').innerHTML='';$('pdfbox').style.display='none';
+  pdf=null;pg=1;
+  await loadHL(id);
+  // Try Supabase first
+  showUpload('loading');
+  try{
+    const{data}=await sb.storage.from(BUCKET).download(`${id}.pdf`);
+    if(data){await loadPDF(await data.arrayBuffer());return;}
+  }catch(e){}
+  showUpload('ready');
+}
+
+function showUpload(state){
+  const uz=$('uz');uz.style.display='flex';
+  if(state==='loading'){uz.innerHTML='<div class="loading">正在從 Supabase 載入 PDF...</div>';return;}
+  const dl=[];
+  if(curPaper.ax)dl.push(`<a class="lb" href="https://arxiv.org/pdf/${curPaper.ax}.pdf" target="_blank">從 arXiv 下載 PDF↗</a>`);
+  if(curPaper.doi)dl.push(`<a class="lb" href="https://doi.org/${curPaper.doi}" target="_blank">從 DOI 前往↗</a>`);
+  if(curPaper.pmc)dl.push(`<a class="lb" href="https://pmc.ncbi.nlm.nih.gov/articles/${curPaper.pmc}/" target="_blank">從 PMC 前往↗</a>`);
+  uz.innerHTML=`<div class="da" id="darea" onclick="$('fi').click()">
+    <h3>📄 上傳 PDF 檔案</h3>
+    <p>拖曳或點擊選擇｜上傳後自動存入 Supabase</p>
+    <input type="file" id="fi" accept=".pdf" style="display:none" onchange="handleF(this.files[0])">
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px">${dl.join('')}</div>`;
+  const da=$('darea');
+  da.addEventListener('dragover',e=>{e.preventDefault();da.classList.add('dg')});
+  da.addEventListener('dragleave',()=>da.classList.remove('dg'));
+  da.addEventListener('drop',e=>{e.preventDefault();da.classList.remove('dg');if(e.dataTransfer.files[0])handleF(e.dataTransfer.files[0])});
+}
+
+async function handleF(file){
+  if(!file||file.type!=='application/pdf')return;
+  const buf=await file.arrayBuffer();
+  // Upload to Supabase
+  try{
+    await sb.storage.from(BUCKET).upload(`${curPaper.id}.pdf`,file,{upsert:true,contentType:'application/pdf'});
+  }catch(e){console.warn('Supabase upload:',e)}
+  await loadPDF(buf);
+}
+
+async function loadPDF(buf){
+  try{
+    pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    $('uz').style.display='none';$('pdfbox').style.display='flex';
+    renderPg(pg);
+  }catch(e){alert('PDF 載入失敗：'+e.message)}
+}
+
+async function renderPg(n){
+  if(!pdf)return;
+  const c=$('pdfbox');c.innerHTML='';
+  const page=await pdf.getPage(n);
+  const vp=page.getViewport({scale:zoom});
+  const w=document.createElement('div');w.className='pgw';w.style.width=vp.width+'px';w.style.height=vp.height+'px';
+  const cv=document.createElement('canvas');
+  cv.width=vp.width*devicePixelRatio;cv.height=vp.height*devicePixelRatio;
+  cv.style.width=vp.width+'px';cv.style.height=vp.height+'px';
+  const ctx=cv.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
+  w.appendChild(cv);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  // Text layer
+  const tc=await page.getTextContent();
+  const tl=document.createElement('div');tl.className='tl';w.appendChild(tl);
+  tc.items.forEach(it=>{
+    const sp=document.createElement('span');
+    const tx=pdfjsLib.Util.transform(vp.transform,it.transform);
+    sp.textContent=it.str;sp.style.left=tx[4]+'px';sp.style.top=(vp.height-tx[5])+'px';
+    sp.style.fontSize=Math.abs(tx[0])+'px';
+    if(it.width)sp.style.width=(it.width*vp.scale)+'px';
+    tl.appendChild(sp);
+  });
+  c.appendChild(w);
+  $('pgi').textContent=`${n} / ${pdf.numPages}`;
+  applyHL(n,tl);
+  w.addEventListener('mouseup',handleSel);
+}
+
+function prevP(){if(pdf&&pg>1){pg--;renderPg(pg)}}
+function nextP(){if(pdf&&pg<pdf.numPages){pg++;renderPg(pg)}}
+function chgZ(v){zoom=parseFloat(v);if(pdf)renderPg(pg)}
+function closeR(){$('rd').classList.remove('show');$('mn').style.display='block';pdf=null}
+function toggleHL(){$('hlp').classList.toggle('show')}
+
+// ===== HIGHLIGHTING =====
+function handleSel(e){
+  const s=window.getSelection();const t=s.toString().trim();
+  if(t.length>0){
+    selInfo={text:t,page:pg};
+    const sp=$('sp');sp.style.display='flex';sp.style.left=(e.clientX-50)+'px';sp.style.top=(e.clientY-40)+'px';
+  }else{$('sp').style.display='none';selInfo=null}
+}
+document.addEventListener('mousedown',e=>{if(!e.target.closest('#sp'))$('sp').style.display='none'});
+
+async function addHL(color){
+  if(!selInfo||!curPaper)return;
+  const id=curPaper.id;
+  if(!hls[id])hls[id]=[];
+  hls[id].push({text:selInfo.text,page:selInfo.page,color,note:'',ts:Date.now()});
+  await saveHL(id);renderHLL();
+  $('sp').style.display='none';window.getSelection().removeAllRanges();
+  renderPg(pg);
+}
+
+function applyHL(pageN,tl){
+  if(!curPaper||!hls[curPaper.id])return;
+  const phl=hls[curPaper.id].filter(h=>h.page===pageN);
+  const spans=tl.querySelectorAll('span');
+  phl.forEach(h=>{
+    spans.forEach(sp=>{
+      const t=sp.textContent.trim();
+      if(t&&h.text.includes(t)&&t.length>1){sp.classList.add('hl',h.color)}
+    });
+  });
+}
+
+function renderHLL(){
+  const l=$('hll');
+  if(!curPaper||!hls[curPaper.id]||!hls[curPaper.id].length){
+    l.innerHTML='<div style="font-size:11px;color:var(--mt);text-align:center;padding:16px">尚無標記<br>選取 PDF 文字即可新增</div>';return;
+  }
+  const h=hls[curPaper.id].slice().reverse();
+  l.innerHTML=h.map((hl,ri)=>{
+    const i=h.length-1-ri;
+    const bc=hl.color==='yellow'?'#fdd835':hl.color==='green'?'#4caf50':hl.color==='pink'?'#e91e63':'#2196f3';
+    return `<div class="hi"><div class="ht" style="border-color:${bc}">"${hl.text.slice(0,100)}${hl.text.length>100?'...':''}"</div>
+    <div class="hp">第 ${hl.page} 頁</div>
+    ${hl.note?`<div class="hn">📝 ${hl.note}</div>`:''}
+    <div class="ha"><button onclick="noteHL(${i})">筆記</button><button onclick="goPg(${hl.page})">跳轉</button><button onclick="delHL(${i})">刪除</button></div></div>`;
+  }).join('');
+}
+
+async function noteHL(i){const n=prompt('輸入筆記：',hls[curPaper.id][i].note||'');if(n!==null){hls[curPaper.id][i].note=n;await saveHL(curPaper.id);renderHLL()}}
+function goPg(p){pg=p;renderPg(pg)}
+async function delHL(i){hls[curPaper.id].splice(i,1);await saveHL(curPaper.id);renderHLL();if(pdf)renderPg(pg)}
+
+// ===== STORAGE (Supabase) =====
+async function saveHL(paperId){
+  try{
+    const data=JSON.stringify(hls[paperId]);
+    const blob=new Blob([data],{type:'application/json'});
+    await sb.storage.from(BUCKET).upload(`highlights/${paperId}.json`,blob,{upsert:true,contentType:'application/json'});
+  }catch(e){console.warn('Save HL:',e)}
+}
+async function loadHL(paperId){
+  try{
+    const{data}=await sb.storage.from(BUCKET).download(`highlights/${paperId}.json`);
+    if(data){hls[paperId]=JSON.parse(await data.text())}else{hls[paperId]=[]}
+  }catch(e){hls[paperId]=[]}
+  renderHLL();
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown',e=>{
+  if(!pdf)return;
+  if(e.key==='ArrowLeft')prevP();
+  if(e.key==='ArrowRight')nextP();
+});
+
+// ===== INIT =====
+buildNav();showP('overview');
+</script>
+</body>
+</html>
