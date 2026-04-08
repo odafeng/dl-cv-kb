@@ -105,9 +105,10 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
   #rd{position:fixed!important;inset:0;z-index:60}
   #rtb{padding:6px 10px;gap:4px;overflow-x:auto}
   #rtb button,#rtb select{font-size:10px;padding:4px 8px}
-  #rbd{flex-direction:column}
+  #rbd{flex-direction:column;height:calc(100vh - 42px)}
+  #pdf-iframe{flex:1!important;min-height:0}
   #pdfbox{padding:8px}
-  #hlp{position:fixed!important;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:50vh;z-index:65;border-left:none!important;border-top:1px solid var(--bd);border-radius:12px 12px 0 0}
+  #hlp{position:relative!important;width:100%!important;min-width:0!important;max-height:35vh;z-index:65;border-left:none!important;border-top:1px solid var(--bd);border-radius:0;overflow-y:auto;flex-shrink:0}
   #uz{padding:16px}
   .da{padding:30px 20px}.da h3{font-size:14px}
   .nb{padding:12px 10px;font-size:13px}
@@ -132,16 +133,17 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
   <div id="rtb">
     <button onclick="closeR()">← 返回</button>
     <span id="rtit" style="font-weight:700;font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-    <button onclick="prevP()">◀ 上一頁</button>
-    <span id="pgi" style="font-size:11px;color:var(--mt)"></span>
-    <button onclick="nextP()">下一頁 ▶</button>
-    <select id="zs" onchange="chgZ(this.value)"><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select>
+    <button class="desktop-only" onclick="prevP()">◀ 上一頁</button>
+    <span class="desktop-only" id="pgi" style="font-size:11px;color:var(--mt)"></span>
+    <button class="desktop-only" onclick="nextP()">下一頁 ▶</button>
+    <select class="desktop-only" id="zs" onchange="chgZ(this.value)"><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select>
     <button onclick="toggleHL()">📝 標記面板</button>
   </div>
   <div id="rbd">
     <div id="uz"></div>
     <div id="pdfbox"></div>
-    <div id="hlp"><h3>📝 我的標記</h3><div id="hll"></div></div>
+    <iframe id="pdf-iframe" style="display:none;flex:1;border:none;width:100%;height:100%"></iframe>
+    <div id="hlp"><h3>📝 我的標記</h3><div id="hl-add-mobile" style="display:none;margin-bottom:10px"><textarea id="hl-input" rows="2" placeholder="貼上要標記的文字..." style="width:100%;font:12px inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--t);resize:vertical"></textarea><div style="display:flex;gap:4px;margin-top:4px"><button class="cb" style="background:rgba(255,235,59,.6)" onclick="addHLManual('yellow')"></button><button class="cb" style="background:rgba(76,175,80,.5)" onclick="addHLManual('green')"></button><button class="cb" style="background:rgba(233,30,99,.45)" onclick="addHLManual('pink')"></button><button class="cb" style="background:rgba(33,150,243,.45)" onclick="addHLManual('blue')"></button></div></div><div id="hll"></div></div>
   </div>
 </div>
 <div id="sp">
@@ -314,14 +316,35 @@ function pcHTML(p){
 }
 
 // ===== PDF READER =====
+const isMobile=()=>window.innerWidth<768||('ontouchstart' in window&&window.innerWidth<1024);
+const SB_PUBLIC=`${SB_URL}/storage/v1/object/public/${BUCKET}`;
+
 async function openR(id){
   curPaper=P.find(p=>p.id===id);if(!curPaper)return;
   $('mn').style.display='none';$('rd').classList.add('show');
   $('rtit').textContent=curPaper.t;
   $('pdfbox').innerHTML='';$('pdfbox').style.display='none';
+  $('pdf-iframe').style.display='none';
   pdf=null;pg=1;
   await loadHL(id);
-  // Try Supabase first
+
+  // Mobile: use native PDF viewer via iframe
+  if(isMobile()){
+    $('hl-add-mobile').style.display='block';
+    // Hide desktop-only toolbar buttons
+    document.querySelectorAll('.desktop-only').forEach(el=>el.style.display='none');
+    const url=`${SB_PUBLIC}/${id}.pdf`;
+    $('uz').style.display='none';
+    $('pdf-iframe').src=url;
+    $('pdf-iframe').style.display='flex';
+    $('hlp').classList.add('show');
+    renderHLL();
+    return;
+  }
+
+  // Desktop: use pdf.js
+  $('hl-add-mobile').style.display='none';
+  document.querySelectorAll('.desktop-only').forEach(el=>el.style.display='');
   showUpload('loading');
   try{
     const{data}=await sb.storage.from(BUCKET).download(`${id}.pdf`);
@@ -423,8 +446,20 @@ async function renderPg(n){
 function prevP(){if(pdf&&pg>1){pg--;renderPg(pg)}}
 function nextP(){if(pdf&&pg<pdf.numPages){pg++;renderPg(pg)}}
 function chgZ(v){zoom=parseFloat(v);if(pdf)renderPg(pg)}
-function closeR(){$('rd').classList.remove('show');$('mn').style.display='block';pdf=null}
+function closeR(){$('rd').classList.remove('show');$('mn').style.display='block';pdf=null;$('pdf-iframe').src='';$('pdf-iframe').style.display='none';$('hlp').classList.remove('show')}
 function toggleHL(){$('hlp').classList.toggle('show')}
+
+// Mobile manual highlight
+async function addHLManual(color){
+  const input=$('hl-input');
+  const text=input.value.trim();
+  if(!text||!curPaper)return;
+  const id=curPaper.id;
+  if(!hls[id])hls[id]=[];
+  hls[id].push({text,page:0,color,note:'(手動標記)',ts:Date.now()});
+  await saveHL(id);renderHLL();
+  input.value='';
+}
 
 // ===== HIGHLIGHTING =====
 function handleSel(e){
@@ -522,7 +557,7 @@ function renderHLL(){
     const i=h.length-1-ri;
     const bc=hl.color==='yellow'?'#fdd835':hl.color==='green'?'#4caf50':hl.color==='pink'?'#e91e63':'#2196f3';
     return `<div class="hi"><div class="ht" style="border-color:${bc}">"${hl.text.slice(0,100)}${hl.text.length>100?'...':''}"</div>
-    <div class="hp">第 ${hl.page} 頁</div>
+    <div class="hp">${hl.page>0?`第 ${hl.page} 頁`:'手動標記'}</div>
     ${hl.note?`<div class="hn">📝 ${hl.note}</div>`:''}
     <div class="ha"><button onclick="noteHL(${i})">筆記</button><button onclick="goPg(${hl.page})">跳轉</button><button onclick="delHL(${i})">刪除</button></div></div>`;
   }).join('');
