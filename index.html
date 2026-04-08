@@ -80,9 +80,10 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 .rc{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px 18px;margin-bottom:12px}
 .rc h3{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:9px}
 .rn{width:32px;height:32px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
-.rt{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:12.5px;color:var(--t2);line-height:1.45;cursor:pointer}
-.rt input[type=checkbox]{width:15px;height:15px;margin-top:2px;flex-shrink:0;accent-color:var(--ac);cursor:pointer}
-.rt.done{text-decoration:line-through;opacity:.5}
+.rt{display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;font-size:12.5px;color:var(--t2);line-height:1.45;cursor:pointer;padding:4px 6px;border-radius:4px;transition:background .15s}
+.rt:hover{background:rgba(102,136,255,.05)}
+.rt input[type=checkbox]{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--ac);cursor:pointer}
+.rt.done span{text-decoration:line-through;opacity:.45}
 .ro{font-size:11px;font-weight:700;color:var(--ac);background:var(--acs);display:inline-block;padding:3px 10px;border-radius:5px;margin-top:6px}
 .loading{text-align:center;padding:40px;color:var(--mt);font-size:13px}
 /* Mobile topbar */
@@ -603,6 +604,14 @@ function toggleCk(el){
   el.closest('.rt').classList.toggle('done',el.checked);
   saveCkState();
 }
+// Click anywhere on .rt row to toggle checkbox
+document.addEventListener('click',e=>{
+  const rt=e.target.closest('.rt');
+  if(!rt)return;
+  if(e.target.tagName==='INPUT')return; // checkbox handles itself
+  const cb=rt.querySelector('input[type=checkbox]');
+  if(cb){cb.checked=!cb.checked;toggleCk(cb)}
+});
 function applyCkState(){
   document.querySelectorAll('.rt input[type=checkbox]').forEach(el=>{
     const key=el.dataset.ck;
