@@ -126,9 +126,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 </style>
 </head>
 <body>
-<div id="mtb"><h1>📚 博士論文知識庫</h1><button id="mbtn" onclick="toggleSB()">☰</button></div>
+<div id="mtb"><h1>📚 博士論文知識庫</h1><div style="display:flex;gap:6px;align-items:center"><input id="msearch" type="search" placeholder="搜尋文獻..." oninput="doSearch(this.value)" style="font:12px inherit;padding:5px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--t);width:120px"><button id="mbtn" onclick="toggleSB()">☰</button></div></div>
 <div id="overlay" onclick="toggleSB()"></div>
-<div id="sb"><h1>博士論文知識庫</h1><div class="sub">手術影像分析 · 黃士峯</div><div id="nv"></div></div>
+<div id="sb"><h1>博士論文知識庫</h1><div class="sub">手術影像分析 · 黃士峯</div><input id="ssearch" type="search" placeholder="🔍 搜尋文獻關鍵字..." oninput="doSearch(this.value)" style="display:block;width:100%;font:12px inherit;padding:7px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--t);margin-bottom:10px"><div id="nv"></div></div>
 <div id="mn"></div>
 <div id="rd">
   <div id="rtb">
@@ -201,6 +201,30 @@ const PAGES=[
 ];
 
 let view="overview",curPaper=null,pdf=null,pg=1,zoom=window.innerWidth<768?1:1.5,hls={},selInfo=null;
+
+// ===== SEARCH =====
+function doSearch(q){
+  // Sync both search inputs
+  if($('ssearch').value!==q)$('ssearch').value=q;
+  if($('msearch').value!==q)$('msearch').value=q;
+  q=q.trim().toLowerCase();
+  if(!q){
+    // Restore previous view
+    if(view.startsWith('s_'))showS(view.slice(2));else showP(view);
+    return;
+  }
+  const results=P.filter(p=>{
+    const hay=[p.t,p.a,p.v,p.n,p.s,...p.tg].join(' ').toLowerCase();
+    return q.split(/\s+/).every(w=>hay.includes(w));
+  });
+  const m=$('mn');
+  $('mn').style.display='block';$('rd').classList.remove('show');
+  if(!results.length){
+    m.innerHTML=`<h2>🔍 搜尋：${q}</h2><div style="color:var(--mt);font-size:13px;padding:20px 0">找不到符合的文獻。試試其他關鍵字？</div>`;
+    return;
+  }
+  m.innerHTML=`<h2>🔍 搜尋：${q}</h2><div style="font-size:12px;color:var(--mt);margin-bottom:14px">找到 ${results.length} 篇文獻</div>${results.map(pcHTML).join('')}`;
+}
 
 // ===== MOBILE SIDEBAR =====
 function toggleSB(){
