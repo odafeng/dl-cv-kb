@@ -374,22 +374,63 @@ function renderP(id){
     <div class="pc">${["約100台達文西TME影像＋9階段標註","全球首個機器人TME階段辨識資料集","大腸直腸外科專科醫師擔任專家標註者","結合ctpelvimetry術前評估＋PostOp PWA術後照護"].map(a=>`<div style="display:flex;gap:7px;margin-bottom:4px"><span style="color:var(--ac);font-weight:700;font-size:12px">→</span><span style="font-size:12px;color:var(--t2)">${a}</span></div>`).join('')}</div>`;
   }else if(id==='phases'){
     const phases=[
-      ["Abdominal inspection / exposure","腹腔探查與暴露"],
-      ["IMA/IMV approach and ligation","下腸繫膜動靜脈處理與結紮"],
-      ["Medial-to-lateral mesocolon dissection","由內向外結腸繫膜分離"],
-      ["Lateral colon mobilization","外側結腸游離"],
-      ["Splenic flexure mobilization","脾彎游離"],
-      ["Posterior / early pelvic TME dissection","後方／早期骨盆 TME 解剖"],
-      ["Anterior-lateral / distal pelvic TME completion","前側方／遠端骨盆 TME 完成"],
-      ["Rectal transection","直腸切斷"],
-      ["Reconstruction / anastomosis","重建／吻合"],
+      {en:"Abdominal inspection / exposure",zh:"腹腔探查與暴露",
+       desc:"置入 trocar 後探查腹腔、確認腫瘤位置、擺放病人體位（Trendelenburg + right tilt），將小腸推離骨盆。",
+       cue:"鏡頭在腹腔全景掃描，無明確切割動作",
+       to:"開始辨識並接近 IMA 根部"},
+      {en:"IMA/IMV approach and ligation",zh:"下腸繫膜動靜脈處理與結紮",
+       desc:"辨識 IMA 起源處，沿主動脈前方分離，以 Hem-o-lok / 血管釘 / 能量裝置結紮 IMA（high tie 或 low tie）。IMV 可同步處理或延後至脾彎游離時。",
+       cue:"辨認主動脈前方的 IMA，夾具或能量裝置出現在血管上",
+       to:"IMA（± IMV）結紮完成，轉向結腸繫膜內側"},
+      {en:"Medial-to-lateral mesocolon dissection",zh:"由內向外結腸繫膜分離",
+       desc:"從 IMA 斷端沿 Toldt's fascia 向外側、頭端分離，建立結腸繫膜與後腹膜之間的無血管平面。辨識左側輸尿管與性腺血管並保護。",
+       cue:"在後腹膜上方的膜層間推進，可見黃色脂肪與筋膜間隙",
+       to:"內側分離到達腹壁側腹膜反折處（lateral peritoneal reflection）"},
+      {en:"Lateral colon mobilization",zh:"外側結腸游離",
+       desc:"切開 left paracolic gutter 的側腹膜，將降結腸從側腹壁游離。與 Phase 3 的內側分離平面會合。",
+       cue:"沿腹壁白線（white line of Toldt）切開腹膜",
+       to:"降結腸完全游離，視野轉向脾彎方向"},
+      {en:"Splenic flexure mobilization",zh:"脾彎游離",
+       desc:"分離橫結腸繫膜與大網膜之間的粘連，游離脾彎使降結腸有足夠長度進行無張力吻合。需注意脾臟下極避免損傷。",
+       cue:"視野朝向左上方，分離結腸與胃大彎/脾臟之間的組織",
+       to:"脾彎完全游離，結腸可無張力拉到骨盆；視野轉入骨盆"},
+      {en:"Posterior / early pelvic TME dissection",zh:"後方／早期骨盆 TME 解剖",
+       desc:"進入骨盆，沿直腸後方的 holy plane（直腸固有筋膜與壁層骨盆筋膜之間的無血管平面）向遠端分離。辨識並保護下腹神經（hypogastric nerve）。此階段為 plane recognition 的核心區域。",
+       cue:"視野深入骨盆，在直腸後方的疏鬆結締組織間推進",
+       to:"後方解剖到達骨盆底（levator ani 水平），轉向前方與側方"},
+      {en:"Anterior-lateral / distal pelvic TME completion",zh:"前側方／遠端骨盆 TME 完成",
+       desc:"完成前方（Denonvilliers' fascia 前方或後方）及兩側方的 TME 分離。辨識並保護骨盆神經叢（pelvic plexus）。直腸周圍 360° 完全游離至預定切斷點。",
+       cue:"視野在直腸前方（男性：精囊/前列腺；女性：子宮/陰道）與兩側方交替",
+       to:"直腸 360° 周圍完全游離，可清楚看到預定切斷點遠端的直腸壁"},
+      {en:"Rectal transection",zh:"直腸切斷",
+       desc:"以線性切割釘合器（stapler）在腫瘤遠端足夠安全距離處切斷直腸。可能需要多次擊發。低位腫瘤可能需要經肛門 ISR 或 Hartmann 術式。",
+       cue:"Endo-GIA / 線性切割器出現在視野中，夾住直腸",
+       to:"直腸切斷完成，標本可取出"},
+      {en:"Reconstruction / anastomosis",zh:"重建／吻合",
+       desc:"取出標本後，進行結腸-直腸（或結腸-肛管）吻合。通常使用環形釘合器（circular stapler）進行端對端吻合。測試吻合口密封性（leak test）。視需要建立暫時性迴腸造口。",
+       cue:"環形釘合器鉆頭（anvil）出現；或經肛門操作",
+       to:"—（手術結束）"},
     ];
     m.innerHTML=`<h2>🔬 Robotic TME 9-Phase Schema <span style="font-size:12px;color:var(--mt);font-weight:500">v0.1</span></h2>
     <p style="font-size:12px;color:var(--t2);margin-bottom:14px">自訂的機器人全直腸繫膜切除術 9 階段標註架構，用於手術影片逐幀標註。</p>
-    <div class="phase-grid">${phases.map((p,i)=>`<div class="phase-card"><div class="phase-num">${i+1}</div><div><div class="phase-name">${p[1]}</div><div class="phase-name-en">${p[0]}</div></div></div>`).join('')}</div>
+    ${phases.map((p,i)=>`
+      <div class="pc" style="padding:16px 18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div class="phase-num">${i+1}</div>
+          <div><div class="phase-name" style="font-size:14px">${p.zh}</div><div style="font-size:11px;color:var(--mt)">${p.en}</div></div>
+        </div>
+        <div style="font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:8px">${p.desc}</div>
+        <div style="font-size:11.5px;margin-bottom:6px"><span style="color:var(--ac);font-weight:700">👁 視覺特徵：</span><span style="color:var(--t2)">${p.cue}</span></div>
+        ${p.to!=='—（手術結束）'?`<div style="display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(255,180,100,.08);border-radius:6px;border:1px solid rgba(255,180,100,.15)"><span style="color:#ffb464;font-weight:700;font-size:11px">⬇ 切換至 Phase ${i+2} 的判定點：</span><span style="font-size:11.5px;color:var(--t2)">${p.to}</span></div>`:`<div style="font-size:11px;color:var(--mt);font-style:italic">手術結束</div>`}
+      </div>
+    `).join('')}
     <div style="margin-top:16px;font-size:12px;color:var(--t2);line-height:1.6">
     <div style="font-weight:700;margin-bottom:6px;color:var(--t)">設計說明</div>
-    <p>Phase 6-7 將骨盆 TME 解剖拆為後方（early）與前側方（completion），反映實際手術中 posterior holy plane dissection 先行、anterior/lateral dissection 後續完成的順序。這比單一「pelvic dissection」phase 更能捕捉 plane recognition 的關鍵時刻。</p>
+    <p style="margin-bottom:8px">Phase 6-7 將骨盆 TME 解剖拆為後方（early）與前側方（completion），反映實際手術中 posterior holy plane dissection 先行、anterior/lateral dissection 後續完成的順序。這比單一「pelvic dissection」phase 更能捕捉 plane recognition 的關鍵時刻。</p>
+    <div style="font-weight:700;margin-bottom:6px;color:var(--t)">標註原則</div>
+    <p>• 切換點以「決定性動作開始」為準，而非器械移動或暫停<br>
+    • 若兩個 phase 的動作短暫重疊（如 IMV 在脾彎游離時才結紮），以主要目的判定<br>
+    • 不可標註的片段（鏡頭模糊、清潔鏡頭、嚴重出血處理）另設 flag 但不新增 phase</p>
     </div>`;
   }else if(id==='roadmap_learn'){
     m.innerHTML=`<h2>📖 學習路線</h2>
