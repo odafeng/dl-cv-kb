@@ -83,9 +83,49 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 .rt::before{content:"";width:14px;height:14px;border:2px solid var(--bd);border-radius:3px;flex-shrink:0;margin-top:2px;display:block}
 .ro{font-size:11px;font-weight:700;color:var(--ac);background:var(--acs);display:inline-block;padding:3px 10px;border-radius:5px;margin-top:6px}
 .loading{text-align:center;padding:40px;color:var(--mt);font-size:13px}
+/* Mobile topbar */
+#mtb{display:none;position:sticky;top:0;z-index:40;background:var(--sb);border-bottom:1px solid var(--bd);padding:10px 14px;align-items:center;justify-content:space-between}
+#mtb h1{font-size:14px;font-weight:800}
+#mtb button{background:none;border:none;color:var(--t);font-size:22px;cursor:pointer;padding:4px 8px}
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:45}
+#overlay.show{display:block}
+/* RWD */
+@media(max-width:768px){
+  body{flex-direction:column}
+  #mtb{display:flex!important}
+  #sb{position:fixed;left:0;top:0;z-index:50;height:100vh;transform:translateX(-100%);transition:transform .25s ease;width:260px}
+  #sb.open{transform:translateX(0)}
+  #mn{padding:16px 14px!important;overflow-y:auto;flex:1}
+  #mn h2{font-size:18px}
+  .pc{padding:14px 16px}.pt{font-size:14px}.pn{font-size:12px}
+  .phase-grid{grid-template-columns:1fr}
+  .prg{grid-template-columns:1fr}
+  /* Reader mobile */
+  #rd{position:fixed;inset:0;z-index:60}
+  #rtb{padding:6px 10px;gap:4px;overflow-x:auto}
+  #rtb button,#rtb select{font-size:10px;padding:4px 8px}
+  #rbd{flex-direction:column}
+  #pdfbox{padding:8px}
+  #hlp{position:fixed;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:50vh;z-index:65;border-left:none;border-top:1px solid var(--bd);border-radius:12px 12px 0 0}
+  #uz{padding:16px}
+  .da{padding:30px 20px}.da h3{font-size:14px}
+  /* Touch targets */
+  .nb{padding:12px 10px;font-size:13px}
+  .lb,.rb{padding:6px 14px;font-size:11px}
+  .cb{width:28px;height:28px}
+  #sp{padding:6px}
+}
+@media(max-width:400px){
+  #mn{padding:12px 10px!important}
+  .pc{padding:12px}
+  .phase-card{padding:10px}
+  #rtb{font-size:10px}
+}
 </style>
 </head>
 <body>
+<div id="mtb"><h1>📚 博士論文知識庫</h1><button id="mbtn" onclick="toggleSB()">☰</button></div>
+<div id="overlay" onclick="toggleSB()"></div>
 <div id="sb"><h1>博士論文知識庫</h1><div class="sub">手術影像分析 · 黃士峯</div><div id="nv"></div></div>
 <div id="mn"></div>
 <div id="rd">
@@ -95,7 +135,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
     <button onclick="prevP()">◀ 上一頁</button>
     <span id="pgi" style="font-size:11px;color:var(--mt)"></span>
     <button onclick="nextP()">下一頁 ▶</button>
-    <select id="zs" onchange="chgZ(this.value)"><option value="1">100%</option><option value="1.5" selected>150%</option><option value="2">200%</option><option value="2.5">250%</option></select>
+    <select id="zs" onchange="chgZ(this.value)"><option value="0.75">75%</option><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option></select>
     <button onclick="toggleHL()">📝 標記面板</button>
   </div>
   <div id="rbd">
@@ -157,7 +197,20 @@ const PAGES=[
 {id:"roadmap",icon:"🗺️",t:"論文路線圖"},
 ];
 
-let view="overview",curPaper=null,pdf=null,pg=1,zoom=1.5,hls={},selInfo=null;
+let view="overview",curPaper=null,pdf=null,pg=1,zoom=window.innerWidth<768?1:1.5,hls={},selInfo=null;
+
+// ===== MOBILE SIDEBAR =====
+function toggleSB(){
+  const sb=$('sb'),ov=$('overlay'),btn=$('mbtn');
+  const open=sb.classList.toggle('open');
+  ov.classList.toggle('show',open);
+  btn.textContent=open?'✕':'☰';
+}
+function closeSB(){
+  $('sb').classList.remove('open');
+  $('overlay').classList.remove('show');
+  $('mbtn').textContent='☰';
+}
 
 // ===== NAV =====
 function buildNav(){
@@ -173,8 +226,8 @@ function updNav(){
   const b=document.querySelector(`.nb[data-id="${d}"]`);
   if(b)b.classList.add('on');
 }
-function showP(id){view=id;curPaper=null;$('mn').style.display='block';$('rd').classList.remove('show');updNav();renderP(id)}
-function showS(s){view=`s_${s}`;curPaper=null;$('mn').style.display='block';$('rd').classList.remove('show');updNav();renderS(s)}
+function showP(id){view=id;curPaper=null;$('mn').style.display='block';$('rd').classList.remove('show');updNav();renderP(id);closeSB()}
+function showS(s){view=`s_${s}`;curPaper=null;$('mn').style.display='block';$('rd').classList.remove('show');updNav();renderS(s);closeSB()}
 
 // ===== RENDER =====
 function $(id){return document.getElementById(id)}
@@ -420,6 +473,7 @@ document.addEventListener('keydown',e=>{
 
 // ===== INIT =====
 buildNav();showP('overview');
+$('zs').value=zoom;
 </script>
 </body>
 </html>
