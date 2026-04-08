@@ -97,6 +97,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 .rt-page{max-width:640px;margin:0 auto 24px;padding:20px;background:var(--card);border-radius:10px;border:1px solid var(--bd)}
 .rt-page-num{font-size:10px;color:var(--mt);text-align:center;margin-bottom:12px;font-weight:600;letter-spacing:1px}
 .rt-page p{font-size:15px;line-height:1.85;color:var(--t2);margin-bottom:8px;word-break:break-word}
+.rt-page .rt-title{font-size:20px;font-weight:800;color:var(--t);line-height:1.35;margin:0 0 12px;text-align:center}
+.rt-page .rt-heading{font-size:16px;font-weight:700;color:var(--t);line-height:1.4;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bd)}
+.rt-page .rt-small{font-size:12px;color:var(--mt);line-height:1.5;margin-bottom:4px}
 .rt-page ::selection{background:rgba(255,235,59,.4)}
 #float-hl{display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:80;background:var(--card);border:1px solid var(--bd);border-radius:24px;padding:6px 10px;box-shadow:0 4px 20px rgba(0,0,0,.5);gap:6px;align-items:center}
 #float-hl .cb{width:30px;height:30px}
@@ -513,21 +516,31 @@ function chgZ(v){zoom=parseFloat(v);if(pdf)renderPg(pg)}
 function closeR(){$('rd').classList.remove('show');$('mn').style.display='block';pdf=null;$('pdf-iframe').src='';$('pdf-iframe').style.display='none';$('reader-text').style.display='none';$('hlp').classList.remove('show');$('float-hl').style.display='none'}
 
 // ===== READER MODE (mobile) =====
-let readerDoc=null;
+let readerDoc=null;let readerBuf=null;
 async function renderReaderMode(buf){
+  readerBuf=buf;
   readerDoc=await pdfjsLib.getDocument({data:buf}).promise;
   const rt=$('reader-text');
-  rt.innerHTML='<div id="rt-content"></div>';
+  rt.innerHTML=`<div class="rt-toolbar">
+    <button class="active" onclick="switchMode('page',this)">📄 頁面</button>
+    <button onclick="switchMode('text',this)">📝 文字</button>
+  </div><div id="rt-content"></div>`;
   await renderPageMode();
 }
+function switchMode(mode,btn){
+  document.querySelectorAll('.rt-toolbar button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(mode==='page')renderPageMode();else renderTextMode();
+}
 
+// --- Page mode: render as images ---
 async function renderPageMode(){
   const doc=readerDoc;if(!doc)return;
   const cont=$('rt-content');
   const screenW=Math.min(window.innerWidth-24,640);
   let html='';
   for(let i=1;i<=doc.numPages;i++){
-    html+=`<div class="rt-page-img" data-page="${i}" style="min-height:${screenW*1.4}px;display:flex;align-items:center;justify-content:center"><div class="loading" style="padding:20px">第 ${i} 頁載入中...</div></div>`;
+    html+=`<div class="rt-page-img" data-page="${i}" style="min-height:${screenW*1.4}px;display:flex;align-items:center;justify-content:center;flex-direction:column"><div class="loading" style="padding:20px">第 ${i} 頁載入中...</div></div>`;
   }
   cont.innerHTML=html;
   const observer=new IntersectionObserver(async(entries)=>{
@@ -536,9 +549,9 @@ async function renderPageMode(){
       const div=entry.target;
       if(div.dataset.rendered)continue;
       div.dataset.rendered='1';
-      const pageNum=parseInt(div.dataset.page);
+      const pn=parseInt(div.dataset.page);
       try{
-        const page=await doc.getPage(pageNum);
+        const page=await doc.getPage(pn);
         const scale=screenW/page.getViewport({scale:1}).width;
         const vp=page.getViewport({scale});
         const cv=document.createElement('canvas');
@@ -546,17 +559,134 @@ async function renderPageMode(){
         cv.style.width='100%';cv.style.borderRadius='6px';
         const ctx=cv.getContext('2d');ctx.scale(2,2);
         await page.render({canvasContext:ctx,viewport:vp}).promise;
-        div.innerHTML='';
-        div.style.minHeight='auto';
+        div.innerHTML='';div.style.minHeight='auto';
         div.appendChild(cv);
         const lbl=document.createElement('div');
         lbl.className='rt-page-num';lbl.style.marginTop='6px';
-        lbl.textContent=`第 ${pageNum} / ${doc.numPages} 頁`;
+        lbl.textContent=`第 ${pn} / ${doc.numPages} 頁`;
         div.appendChild(lbl);
-      }catch(e){div.innerHTML=`<div class="loading">第 ${pageNum} 頁載入失敗</div>`}
+      }catch(e){div.innerHTML=`<div class="loading">載入失敗</div>`}
     }
   },{rootMargin:'300px'});
   cont.querySelectorAll('.rt-page-img').forEach(el=>observer.observe(el));
+}
+
+// --- Text mode: smart extraction ---
+async function renderTextMode(){
+  const doc=readerDoc;if(!doc)return;
+  const cont=$('rt-content');
+  cont.innerHTML='<div class="loading">智慧擷取文字中...</div>';
+  let html='';
+  for(let i=1;i<=doc.numPages;i++){
+    const page=await doc.getPage(i);
+    const vp=page.getViewport({scale:1});
+    const tc=await page.getTextContent();
+    const pageH=vp.height;const pageW=vp.width;
+    const midX=pageW/2;
+
+    // 1. Enrich items with computed properties
+    const items=tc.items.filter(it=>it.str.trim()).map(it=>({
+      str:it.str,
+      x:Math.round(it.transform[4]),
+      y:Math.round(pageH-it.transform[5]),
+      fontSize:Math.round(Math.abs(it.transform[0])*10)/10,
+      width:it.width||0,
+    }));
+    if(!items.length){html+=`<div class="rt-page" data-page="${i}"><div class="rt-page-num">— 第 ${i} / ${doc.numPages} 頁 —</div><p style="color:var(--mt)">(此頁無文字內容)</p></div>`;continue}
+
+    // 2. Filter headers/footers (top 6% / bottom 6%)
+    const marginTop=pageH*0.06, marginBot=pageH*0.94;
+    const bodyItems=items.filter(it=>it.y>marginTop&&it.y<marginBot);
+    if(!bodyItems.length)continue;
+
+    // 3. Find dominant body font size
+    const sizeCounts={};
+    bodyItems.forEach(it=>{sizeCounts[it.fontSize]=(sizeCounts[it.fontSize]||0)+1});
+    const bodyFontSize=parseFloat(Object.entries(sizeCounts).sort((a,b)=>b[1]-a[1])[0][0]);
+
+    // 4. Detect two-column layout
+    const leftItems=bodyItems.filter(it=>it.x<midX-20);
+    const rightItems=bodyItems.filter(it=>it.x>=midX-20);
+    const isTwoCol=leftItems.length>5&&rightItems.length>5;
+
+    // 5. Sort items into reading order
+    let sorted;
+    if(isTwoCol){
+      // Left column top-to-bottom, then right column top-to-bottom
+      const leftSorted=leftItems.sort((a,b)=>a.y-b.y||a.x-b.x);
+      const rightSorted=rightItems.sort((a,b)=>a.y-b.y||a.x-b.x);
+      sorted=[...leftSorted,...rightSorted];
+    }else{
+      sorted=bodyItems.sort((a,b)=>a.y-b.y||a.x-b.x);
+    }
+
+    // 6. Group into lines (items with similar Y)
+    const lines=[];let curLine=[sorted[0]];
+    for(let j=1;j<sorted.length;j++){
+      const prev=curLine[curLine.length-1];
+      const cur=sorted[j];
+      // New line if Y gap > 3, or column switch in two-col
+      const sameCol=!isTwoCol||(prev.x<midX===cur.x<midX);
+      if(Math.abs(cur.y-prev.y)<=3&&sameCol){
+        curLine.push(cur);
+      }else{
+        lines.push(curLine);curLine=[cur];
+      }
+    }
+    if(curLine.length)lines.push(curLine);
+
+    // 7. Convert lines to structured blocks
+    const blocks=[];
+    lines.forEach(line=>{
+      const text=line.map(it=>it.str).join(' ').trim();
+      if(!text)return;
+      const avgSize=line.reduce((s,it)=>s+it.fontSize,0)/line.length;
+      const isHeading=avgSize>bodyFontSize+1.5;
+      const isTitle=avgSize>bodyFontSize+4&&i===1;
+      const isSmall=avgSize<bodyFontSize-1;
+      blocks.push({text,avgSize,isHeading,isTitle,isSmall,y:line[0].y});
+    });
+
+    // 8. Merge body text blocks into paragraphs
+    let pageHTML='';
+    let paraLines=[];
+    const flushPara=()=>{
+      if(!paraLines.length)return;
+      const merged=paraLines.join(' ').replace(/- (?=[a-z])/g,'');// fix hyphenation
+      pageHTML+=`<p>${escHTML(merged)}</p>`;
+      paraLines=[];
+    };
+
+    for(let j=0;j<blocks.length;j++){
+      const b=blocks[j];
+      const prevB=j>0?blocks[j-1]:null;
+      const yGap=prevB?b.y-prevB.y:0;
+
+      if(b.isTitle){
+        flushPara();
+        pageHTML+=`<h2 class="rt-title">${escHTML(b.text)}</h2>`;
+      }else if(b.isHeading){
+        flushPara();
+        pageHTML+=`<h3 class="rt-heading">${escHTML(b.text)}</h3>`;
+      }else if(b.isSmall){
+        flushPara();
+        pageHTML+=`<p class="rt-small">${escHTML(b.text)}</p>`;
+      }else{
+        // Body text - merge into paragraph or start new
+        if(prevB&&yGap>bodyFontSize*2.2&&!prevB.isHeading&&!prevB.isTitle){
+          flushPara(); // large gap = new paragraph
+        }
+        paraLines.push(b.text);
+      }
+    }
+    flushPara();
+
+    html+=`<div class="rt-page" data-page="${i}"><div class="rt-page-num">— 第 ${i} / ${doc.numPages} 頁 —</div>${pageHTML}</div>`;
+  }
+  cont.innerHTML=html;
+  applyReaderHL();
+  cont.addEventListener('mouseup',checkReaderSel);
+  cont.addEventListener('touchend',()=>setTimeout(checkReaderSel,200));
 }
 
 function escHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
