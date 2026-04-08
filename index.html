@@ -378,6 +378,12 @@ const isMobile=()=>window.innerWidth<768||('ontouchstart' in window&&window.inne
 const SB_PUBLIC=`${SB_URL}/storage/v1/object/public/${BUCKET}`;
 
 async function openR(id){
+  // Mobile: open PDF directly in new tab
+  if(isMobile()){
+    window.open(`${SB_PUBLIC}/${id}.pdf`,'_blank');
+    return;
+  }
+  // Desktop: use pdf.js reader
   curPaper=P.find(p=>p.id===id);if(!curPaper)return;
   $('mn').style.display='none';$('rd').classList.add('show');
   $('rtit').textContent=curPaper.t;
@@ -386,32 +392,7 @@ async function openR(id){
   pdf=null;pg=1;
   await loadHL(id);
 
-  // Mobile: reader text mode
-  if(isMobile()){
-    document.querySelectorAll('.desktop-only').forEach(el=>el.style.display='none');
-    $('uz').style.display='none';
-    $('pdf-iframe').style.display='none';
-    $('reader-text').style.display='block';
-    $('reader-text').innerHTML='<div class="loading">正在載入閱讀器模式...</div>';
-    $('hlp').classList.add('show');
-    $('hl-add-mobile').style.display='block';
-    renderHLL();
-    try{
-      const{data}=await sb.storage.from(BUCKET).download(`${id}.pdf`);
-      if(data){
-        const buf=await data.arrayBuffer();
-        await renderReaderMode(buf);
-        return;
-      }
-    }catch(e){}
-    // Fallback: show download links
-    $('reader-text').innerHTML=`<div style="text-align:center;padding:40px"><p style="color:var(--mt);margin-bottom:14px">PDF 尚未上傳至 Supabase</p>${curPaper.ax?`<a class="lb" href="https://arxiv.org/pdf/${curPaper.ax}.pdf" target="_blank">從 arXiv 下載 PDF↗</a>`:''}</div>`;
-    return;
-  }
-
   // Desktop: use pdf.js
-  $('hl-add-mobile').style.display='none';
-  document.querySelectorAll('.desktop-only').forEach(el=>el.style.display='');
   showUpload('loading');
   try{
     const{data}=await sb.storage.from(BUCKET).download(`${id}.pdf`);
