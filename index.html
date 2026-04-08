@@ -42,10 +42,10 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
 #pdfbox{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:16px;background:#14141e;display:none}
 .pgw{position:relative;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.4)}
 .pgw canvas{display:block}
-.tl{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;line-height:1}
-.tl span{position:absolute;color:transparent;white-space:pre;cursor:text}
+.tl{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;line-height:1;text-size-adjust:none;-webkit-text-size-adjust:none}
+.tl span{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
 .tl .hl{border-radius:2px}.tl .hl.yellow{background:var(--hy)}.tl .hl.green{background:var(--hg)}.tl .hl.pink{background:var(--hp)}.tl .hl.blue{background:var(--hb)}
-.tl ::selection{background:rgba(102,136,255,.35)}
+.tl ::selection{background:rgba(102,136,255,.4)}
 #uz{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:30px}
 .da{width:100%;max-width:480px;border:2px dashed var(--bd);border-radius:14px;padding:50px 30px;text-align:center;cursor:pointer;transition:.2s}
 .da:hover,.da.dg{border-color:var(--ac)}
@@ -318,23 +318,19 @@ async function renderPg(n){
   const page=await pdf.getPage(n);
   const vp=page.getViewport({scale:zoom});
   const w=document.createElement('div');w.className='pgw';w.style.width=vp.width+'px';w.style.height=vp.height+'px';
+  // Canvas
   const cv=document.createElement('canvas');
   cv.width=vp.width*devicePixelRatio;cv.height=vp.height*devicePixelRatio;
   cv.style.width=vp.width+'px';cv.style.height=vp.height+'px';
   const ctx=cv.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
   w.appendChild(cv);
   await page.render({canvasContext:ctx,viewport:vp}).promise;
-  // Text layer
+  // Text layer using pdf.js built-in renderTextLayer
   const tc=await page.getTextContent();
-  const tl=document.createElement('div');tl.className='tl';w.appendChild(tl);
-  tc.items.forEach(it=>{
-    const sp=document.createElement('span');
-    const tx=pdfjsLib.Util.transform(vp.transform,it.transform);
-    sp.textContent=it.str;sp.style.left=tx[4]+'px';sp.style.top=(vp.height-tx[5])+'px';
-    sp.style.fontSize=Math.abs(tx[0])+'px';
-    if(it.width)sp.style.width=(it.width*vp.scale)+'px';
-    tl.appendChild(sp);
-  });
+  const tl=document.createElement('div');tl.className='tl';
+  tl.style.width=vp.width+'px';tl.style.height=vp.height+'px';
+  w.appendChild(tl);
+  await pdfjsLib.renderTextLayer({textContentSource:tc,container:tl,viewport:vp}).promise;
   c.appendChild(w);
   $('pgi').textContent=`${n} / ${pdf.numPages}`;
   applyHL(n,tl);
