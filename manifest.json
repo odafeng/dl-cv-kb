@@ -1,17 +1,15 @@
 {
   "name": "博士論文知識庫 — 手術影像分析",
   "short_name": "PhD KB",
-  "description": "Surgical Video Analytics for Robotic TME — PhD Thesis Knowledge Base",
-  "start_url": "/PhD_Thesis/",
-  "scope": "/PhD_Thesis/",
+  "description": "Surgical Video Analytics for Robotic TME",
+  "start_url": "./index.html",
+  "scope": ".",
   "display": "standalone",
   "background_color": "#08080d",
   "theme_color": "#6688ff",
+  "orientation": "any",
   "icons": [
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    }
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ]
 }
