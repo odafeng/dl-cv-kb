@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
 :root{--bg:#08080d;--sb:#0e0e16;--card:#13131e;--bd:#1c1c2e;--t:#e6e6f0;--t2:#9898ae;--mt:#606078;--ac:#6688ff;--acs:rgba(102,136,255,.08);--acb:rgba(102,136,255,.25);--tbg:rgba(102,136,255,.1);--ttx:#8aabff;
 --hy:rgba(255,235,59,.3);--hg:rgba(76,175,80,.3);--hp:rgba(233,30,99,.25);--hb:rgba(33,150,243,.25)}
@@ -236,6 +237,7 @@ const PAGES=[
 {id:"roadmap_learn",icon:"📖",t:"學習路線"},
 {id:"prereqs",icon:"📚",t:"先備知識"},
 {id:"roadmap",icon:"🗺️",t:"論文路線圖"},
+{id:"graph",icon:"🕸️",t:"知識圖譜"},
 ];
 
 let view="overview",curPaper=null,pdf=null,pg=1,zoom=window.innerWidth<768?1:1.5,hls={},selInfo=null;
@@ -372,6 +374,19 @@ function renderP(id){
     ${CHP.map(ch=>`<div class="pc" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="showChapter(${ch.n})"><div class="phase-num" style="color:${ch.color};background:${ch.color}18">${ch.n}</div><div style="flex:1"><div style="font-weight:700;font-size:13px">${ch.t} <span style="font-size:9px;color:var(--ac);background:var(--acs);padding:2px 7px;border-radius:10px;margin-left:5px">${ch.sub}</span></div><div style="font-size:11.5px;color:var(--t2);margin-top:1px">${ch.q.slice(0,50)}...</div></div><span style="color:var(--mt);font-size:14px">›</span></div>`).join('')}
     <div style="font-size:13px;font-weight:700;margin:16px 0 8px">競爭優勢</div>
     <div class="pc">${["約100台達文西TME影像＋9階段標註","全球首個機器人TME階段辨識資料集","大腸直腸外科專科醫師擔任專家標註者","結合ctpelvimetry術前評估＋PostOp PWA術後照護"].map(a=>`<div style="display:flex;gap:7px;margin-bottom:4px"><span style="color:var(--ac);font-weight:700;font-size:12px">→</span><span style="font-size:12px;color:var(--t2)">${a}</span></div>`).join('')}</div>`;
+  }else if(id==='graph'){
+    m.innerHTML=`<h2>🕸️ 知識圖譜</h2>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">拖曳節點探索論文關聯 · 點擊論文節點開啟閱讀器 · 滾輪縮放</div>
+    <div id="graph-container" style="width:100%;height:calc(100vh - 140px);border:1px solid var(--bd);border-radius:10px;overflow:hidden;background:#0a0a14"></div>
+    <div id="graph-legend" style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--t2)"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#6688ff;margin-right:4px"></span>空間骨幹</span>
+      <span style="font-size:11px;color:var(--t2)"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#78dca0;margin-right:4px"></span>時序建模</span>
+      <span style="font-size:11px;color:var(--t2)"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff7eb3;margin-right:4px"></span>視覺語言</span>
+      <span style="font-size:11px;color:var(--t2)"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffb464;margin-right:4px"></span>平面辨識</span>
+      <span style="font-size:11px;color:var(--t2)"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e0e0e0;margin-right:4px"></span>基準挑戰</span>
+      <span style="font-size:11px;color:var(--t2)"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffd54f;margin-right:4px;opacity:.7"></span>共享概念</span>
+    </div>`;
+    renderGraph();
   }else if(id==='phases'){
     const phases=[
       {en:"Abdominal inspection / exposure",zh:"腹腔探查與暴露",
@@ -1066,6 +1081,111 @@ document.addEventListener('keydown',e=>{
 });
 
 // ===== INIT =====
+// ===== KNOWLEDGE GRAPH =====
+const GRAPH_DATA = {"nodes":[{"id":"dacat","type":"paper"},{"id":"hecvl","type":"paper"},{"id":"igaki2022","type":"paper"},{"id":"igaki2025","type":"paper"},{"id":"kolbinger","type":"paper"},{"id":"kumazu","type":"paper"},{"id":"lemon","type":"paper"},{"id":"lovit","type":"paper"},{"id":"mosformer","type":"paper"},{"id":"mstcn","type":"paper"},{"id":"must","type":"paper"},{"id":"peskavlp","type":"paper"},{"id":"phakir","type":"paper"},{"id":"surgbench","type":"paper"},{"id":"surgenetxl","type":"paper"},{"id":"surgformer","type":"paper"},{"id":"surgmotion","type":"paper"},{"id":"surgrec","type":"paper"},{"id":"surgvista","type":"paper"},{"id":"tecno","type":"paper"},{"id":"transsvnet","type":"paper"},{"id":"c_手術階段辨識","type":"concept","label":"手術階段辨識","count":10},{"id":"c_時序建模","type":"concept","label":"時序建模","count":8},{"id":"c_注意力機制","type":"concept","label":"注意力機制","count":6},{"id":"c_膨脹卷積","type":"concept","label":"膨脹卷積","count":3},{"id":"c_視覺語言模型","type":"concept","label":"視覺語言模型","count":2},{"id":"c_對比學習","type":"concept","label":"對比學習","count":2},{"id":"c_語意分割","type":"concept","label":"語意分割","count":4},{"id":"c_TME導航","type":"concept","label":"TME導航","count":2},{"id":"c_骨盆解剖","type":"concept","label":"骨盆解剖","count":2},{"id":"c_遷移學習","type":"concept","label":"遷移學習","count":2},{"id":"c_基礎模型","type":"concept","label":"基礎模型","count":5},{"id":"c_自監督預訓練","type":"concept","label":"自監督預訓練","count":6},{"id":"c_大規模資料","type":"concept","label":"大規模資料","count":6},{"id":"c_長影片處理","type":"concept","label":"長影片處理","count":2},{"id":"c_多尺度特徵","type":"concept","label":"多尺度特徵","count":2},{"id":"c_基準評估","type":"concept","label":"基準評估","count":2}],"edges":[{"source":"dacat","target":"mstcn","type":"builds_on","label":"改進 MS-TCN 的時序建模"},{"source":"dacat","target":"transsvnet","type":"compares","label":"超越 Trans-SVNet"},{"source":"dacat","target":"tecno","type":"compares","label":"對比基線"},{"source":"hecvl","target":"peskavlp","type":"inspired_by","label":"PeskaVLP 的前身"},{"source":"igaki2022","target":"igaki2025","type":"inspired_by","label":"2025版前驅研究"},{"source":"igaki2022","target":"kolbinger","type":"compares","label":"同領域競爭"},{"source":"igaki2025","target":"igaki2022","type":"extends","label":"單區域→三區域"},{"source":"igaki2025","target":"kolbinger","type":"compares","label":"不同分割策略"},{"source":"kolbinger","target":"igaki2022","type":"compares","label":"更全面結構分割"},{"source":"kolbinger","target":"tecno","type":"cites","label":"使用階段辨識概念"},{"source":"kumazu","target":"igaki2022","type":"inspired_by","label":"類似概念不同術式"},{"source":"lemon","target":"surgenetxl","type":"compares","label":"競爭空間骨幹"},{"source":"lemon","target":"tecno","type":"builds_on","label":"提供 phase fine-tune"},{"source":"lovit","target":"transsvnet","type":"builds_on","label":"改進長程依賴"},{"source":"lovit","target":"mosformer","type":"compares","label":"類似長影片目標"},{"source":"mosformer","target":"transsvnet","type":"builds_on","label":"擴展記憶機制"},{"source":"mstcn","target":"tecno","type":"inspired_by","label":"TeCNO 直接改編"},{"source":"must","target":"phakir","type":"builds_on","label":"PhaKIR 冠軍方案"},{"source":"must","target":"transsvnet","type":"builds_on","label":"改進 Transformer"},{"source":"peskavlp","target":"hecvl","type":"extends","label":"HecVL 進化版 +12.3%"},{"source":"phakir","target":"must","type":"cites","label":"MuST 為冠軍"},{"source":"phakir","target":"tecno","type":"cites","label":"包含基線"},{"source":"surgbench","target":"surgenetxl","type":"cites","label":"評估空間骨幹"},{"source":"surgbench","target":"tecno","type":"cites","label":"評估時序方法"},{"source":"surgenetxl","target":"surgvista","type":"compares","label":"圖像 vs 影片"},{"source":"surgenetxl","target":"surgmotion","type":"compares","label":"不同自監督目標"},{"source":"surgformer","target":"transsvnet","type":"builds_on","label":"改進 Transformer"},{"source":"surgmotion","target":"surgenetxl","type":"compares","label":"不同預訓練"},{"source":"surgmotion","target":"surgrec","type":"compares","label":"規模比較"},{"source":"surgrec","target":"surgenetxl","type":"compares","label":"預訓練對比"},{"source":"surgvista","target":"surgenetxl","type":"compares","label":"影片 vs 圖像"},{"source":"tecno","target":"mstcn","type":"builds_on","label":"MS-TCN 手術版"},{"source":"transsvnet","target":"tecno","type":"builds_on","label":"加入 Transformer"},{"source":"transsvnet","target":"mstcn","type":"builds_on","label":"整合 TCN+Transformer"},{"source":"dacat","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"hecvl","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"kolbinger","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"lemon","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"must","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"phakir","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"surgbench","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"surgformer","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"tecno","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"transsvnet","target":"c_手術階段辨識","type":"has_concept","label":""},{"source":"dacat","target":"c_時序建模","type":"has_concept","label":""},{"source":"lovit","target":"c_時序建模","type":"has_concept","label":""},{"source":"mosformer","target":"c_時序建模","type":"has_concept","label":""},{"source":"mstcn","target":"c_時序建模","type":"has_concept","label":""},{"source":"must","target":"c_時序建模","type":"has_concept","label":""},{"source":"surgformer","target":"c_時序建模","type":"has_concept","label":""},{"source":"tecno","target":"c_時序建模","type":"has_concept","label":""},{"source":"transsvnet","target":"c_時序建模","type":"has_concept","label":""},{"source":"dacat","target":"c_注意力機制","type":"has_concept","label":""},{"source":"lovit","target":"c_注意力機制","type":"has_concept","label":""},{"source":"mosformer","target":"c_注意力機制","type":"has_concept","label":""},{"source":"must","target":"c_注意力機制","type":"has_concept","label":""},{"source":"surgformer","target":"c_注意力機制","type":"has_concept","label":""},{"source":"transsvnet","target":"c_注意力機制","type":"has_concept","label":""},{"source":"dacat","target":"c_膨脹卷積","type":"has_concept","label":""},{"source":"mstcn","target":"c_膨脹卷積","type":"has_concept","label":""},{"source":"tecno","target":"c_膨脹卷積","type":"has_concept","label":""},{"source":"hecvl","target":"c_視覺語言模型","type":"has_concept","label":""},{"source":"peskavlp","target":"c_視覺語言模型","type":"has_concept","label":""},{"source":"hecvl","target":"c_對比學習","type":"has_concept","label":""},{"source":"peskavlp","target":"c_對比學習","type":"has_concept","label":""},{"source":"igaki2022","target":"c_語意分割","type":"has_concept","label":""},{"source":"igaki2025","target":"c_語意分割","type":"has_concept","label":""},{"source":"kolbinger","target":"c_語意分割","type":"has_concept","label":""},{"source":"kumazu","target":"c_語意分割","type":"has_concept","label":""},{"source":"igaki2022","target":"c_TME導航","type":"has_concept","label":""},{"source":"igaki2025","target":"c_TME導航","type":"has_concept","label":""},{"source":"igaki2022","target":"c_骨盆解剖","type":"has_concept","label":""},{"source":"igaki2025","target":"c_骨盆解剖","type":"has_concept","label":""},{"source":"kumazu","target":"c_遷移學習","type":"has_concept","label":""},{"source":"surgenetxl","target":"c_遷移學習","type":"has_concept","label":""},{"source":"lemon","target":"c_基礎模型","type":"has_concept","label":""},{"source":"surgenetxl","target":"c_基礎模型","type":"has_concept","label":""},{"source":"surgmotion","target":"c_基礎模型","type":"has_concept","label":""},{"source":"surgrec","target":"c_基礎模型","type":"has_concept","label":""},{"source":"surgvista","target":"c_基礎模型","type":"has_concept","label":""},{"source":"lemon","target":"c_自監督預訓練","type":"has_concept","label":""},{"source":"peskavlp","target":"c_自監督預訓練","type":"has_concept","label":""},{"source":"surgenetxl","target":"c_自監督預訓練","type":"has_concept","label":""},{"source":"surgmotion","target":"c_自監督預訓練","type":"has_concept","label":""},{"source":"surgrec","target":"c_自監督預訓練","type":"has_concept","label":""},{"source":"surgvista","target":"c_自監督預訓練","type":"has_concept","label":""},{"source":"lemon","target":"c_大規模資料","type":"has_concept","label":""},{"source":"surgbench","target":"c_大規模資料","type":"has_concept","label":""},{"source":"surgenetxl","target":"c_大規模資料","type":"has_concept","label":""},{"source":"surgmotion","target":"c_大規模資料","type":"has_concept","label":""},{"source":"surgrec","target":"c_大規模資料","type":"has_concept","label":""},{"source":"surgvista","target":"c_大規模資料","type":"has_concept","label":""},{"source":"lovit","target":"c_長影片處理","type":"has_concept","label":""},{"source":"mosformer","target":"c_長影片處理","type":"has_concept","label":""},{"source":"lovit","target":"c_多尺度特徵","type":"has_concept","label":""},{"source":"must","target":"c_多尺度特徵","type":"has_concept","label":""},{"source":"phakir","target":"c_基準評估","type":"has_concept","label":""},{"source":"surgbench","target":"c_基準評估","type":"has_concept","label":""}]};
+
+const SECTION_COLORS={"空間特徵骨幹":"#6688ff","時序建模頭":"#78dca0","視覺語言模型":"#ff7eb3","切割平面辨識":"#ffb464","基準與挑戰":"#e0e0e0"};
+const EDGE_COLORS={builds_on:"#78dca0",compares:"#6688ff",extends:"#ffb464",cites:"#888",inspired_by:"#ff7eb3",has_concept:"#ffd54f22"};
+
+function renderGraph(){
+  const container=document.getElementById('graph-container');
+  const W=container.clientWidth, H=container.clientHeight;
+  container.innerHTML='';
+  const svg=d3.select(container).append('svg').attr('width',W).attr('height',H);
+  const g=svg.append('g');
+
+  // Zoom
+  svg.call(d3.zoom().scaleExtent([0.3,4]).on('zoom',e=>g.attr('transform',e.transform)));
+
+  // Deep clone data for D3 mutation
+  const nodes=GRAPH_DATA.nodes.map(d=>({...d}));
+  const edges=GRAPH_DATA.edges.map(d=>({...d}));
+
+  // Lookup paper section for coloring
+  const paperSec={};
+  P.forEach(p=>{paperSec[p.id]=p.s});
+  const paperTitle={};
+  P.forEach(p=>{paperTitle[p.id]=p.t});
+
+  const sim=d3.forceSimulation(nodes)
+    .force('link',d3.forceLink(edges).id(d=>d.id).distance(d=>d.type==='has_concept'?80:120).strength(d=>d.type==='has_concept'?0.3:0.7))
+    .force('charge',d3.forceManyBody().strength(d=>d.type==='concept'?-200:-400))
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('collision',d3.forceCollide(d=>d.type==='concept'?20:30));
+
+  // Edges
+  const link=g.append('g').selectAll('line').data(edges).join('line')
+    .attr('stroke',d=>EDGE_COLORS[d.type]||'#333')
+    .attr('stroke-width',d=>d.type==='has_concept'?0.8:1.5)
+    .attr('stroke-opacity',d=>d.type==='has_concept'?0.15:0.5)
+    .attr('stroke-dasharray',d=>d.type==='compares'?'4,3':'none');
+
+  // Nodes
+  const node=g.append('g').selectAll('g').data(nodes).join('g')
+    .call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y})
+      .on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+
+  // Paper nodes
+  node.filter(d=>d.type==='paper').append('circle')
+    .attr('r',14)
+    .attr('fill',d=>(SECTION_COLORS[paperSec[d.id]]||'#666')+'30')
+    .attr('stroke',d=>SECTION_COLORS[paperSec[d.id]]||'#666')
+    .attr('stroke-width',2)
+    .attr('cursor','pointer')
+    .on('click',(e,d)=>{openR(d.id)});
+
+  node.filter(d=>d.type==='paper').append('text')
+    .text(d=>paperTitle[d.id]||d.id)
+    .attr('dy',28).attr('text-anchor','middle')
+    .attr('fill','#ccc').attr('font-size','9px').attr('font-weight','600')
+    .attr('pointer-events','none');
+
+  // Concept nodes
+  node.filter(d=>d.type==='concept').append('circle')
+    .attr('r',d=>6+d.count*1.5)
+    .attr('fill','#ffd54f18')
+    .attr('stroke','#ffd54f')
+    .attr('stroke-width',1)
+    .attr('stroke-opacity',0.5);
+
+  node.filter(d=>d.type==='concept').append('text')
+    .text(d=>d.label)
+    .attr('dy',d=>12+d.count*1.5).attr('text-anchor','middle')
+    .attr('fill','#ffd54f').attr('font-size','10px').attr('font-weight','600')
+    .attr('opacity',0.7).attr('pointer-events','none');
+
+  // Tooltip for edges on hover
+  const tooltip=d3.select(container).append('div')
+    .style('position','absolute').style('background','#1a1a2e').style('color','#e6e6f0')
+    .style('padding','5px 10px').style('border-radius','6px').style('font-size','11px')
+    .style('pointer-events','none').style('opacity',0).style('border','1px solid #2a2a40')
+    .style('z-index',10);
+
+  node.filter(d=>d.type==='paper')
+    .on('mouseenter',(e,d)=>{
+      // Highlight connected edges
+      link.attr('stroke-opacity',l=>(l.source.id===d.id||l.target.id===d.id)?0.9:0.05)
+        .attr('stroke-width',l=>(l.source.id===d.id||l.target.id===d.id)?(l.type==='has_concept'?1:2.5):(l.type==='has_concept'?0.8:1.5));
+      const p=P.find(p=>p.id===d.id);
+      if(p){
+        tooltip.html(`<div style="font-weight:700;margin-bottom:2px">${p.t}</div><div style="color:#9898ae;font-size:10px">${p.a} · ${p.v}</div><div style="margin-top:4px;font-size:10px">${p.n||''}</div>`)
+          .style('left',(e.offsetX+15)+'px').style('top',(e.offsetY-10)+'px').style('opacity',1);
+      }
+    })
+    .on('mouseleave',()=>{
+      link.attr('stroke-opacity',d=>d.type==='has_concept'?0.15:0.5)
+        .attr('stroke-width',d=>d.type==='has_concept'?0.8:1.5);
+      tooltip.style('opacity',0);
+    });
+
+  sim.on('tick',()=>{
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+      .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+}
+
 buildNav();showP('overview');
 $('zs').value=zoom;
 // PWA service worker
