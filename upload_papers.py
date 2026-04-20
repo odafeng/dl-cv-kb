@@ -37,7 +37,7 @@ PAPERS = {
     # Plane recognition (no arXiv — need manual download from publisher)
     # "igaki2022": download from DCR manually
     # "kolbinger": download from EJSO manually (open access)
-    # "igaki2025": download from PMC manually
+    # "suzuki2025": download from PMC manually (DOI: 10.1002/ags3.70064)
     # "kumazu":    download from Nature Sci Reports (open access)
     # "phakir":    download from MedIA manually
 }
@@ -112,7 +112,7 @@ def main():
     print(f"⏭️  跳過: {len(skipped)} — {', '.join(skipped)}")
     print(f"❌ 失敗: {len(failed)} — {', '.join(failed)}")
     print("\n需手動下載的論文（非 arXiv / 需出版社帳號）：")
-    manual = ["igaki2022 (DCR)", "kolbinger (EJSO)", "igaki2025 (PMC)", "mosformer", "lemon (CVPR)"]
+    manual = ["igaki2022 (DCR)", "kolbinger (EJSO)", "suzuki2025 (Ann Gastroenterol Surg)", "mosformer", "lemon (CVPR)"]
     for m in manual:
         print(f"  📥 {m}")
     print(f"\n下載後放到 pdfs/ 資料夾，命名為 {{paper_id}}.pdf，再重跑此腳本即可自動上傳。")
