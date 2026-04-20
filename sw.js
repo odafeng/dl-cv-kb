@@ -1,4 +1,4 @@
-const CACHE='phd-kb-v3';
+const CACHE='phd-kb-v4';
 const PRECACHE=[
   './',
   './index.html',
