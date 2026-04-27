@@ -7,12 +7,13 @@
 // inline, regardless of platform.
 
 import { P } from './data.js';
+import { pdfUrlFor } from './config.js';
 
 const $ = id => document.getElementById(id);
 
 export function openPDF(id) {
   const p = P.find(pp => pp.id === id);
-  const url = `./pdfs/${id}.pdf`;
+  const url = pdfUrlFor(id);
   const title = p?.t || id;
 
   $('pdf-modal-title').textContent = title;

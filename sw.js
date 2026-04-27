@@ -1,6 +1,6 @@
 // Service Worker — offline caching for the static knowledge base
 // Cache version bumped any time precache list changes
-const CACHE = 'phd-kb-v7';
+const CACHE = 'phd-kb-v8';
 
 const PRECACHE = [
   './',
@@ -9,6 +9,7 @@ const PRECACHE = [
   './icon-192.png',
   './icon-512.png',
   './src/app.js',
+  './src/config.js',
   './src/data.js',
   './src/store.js',
   './src/checkboxes.js',
@@ -49,10 +50,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
 
-  // Cache PDFs from same origin lazily on first read
-  if (url.endsWith('.pdf')) {
+  // PDFs may live locally (./pdfs/*.pdf) OR on Supabase Storage
+  // (cross-origin). Cache both lazily on first read so offline still works.
+  if (url.endsWith('.pdf') || url.includes('/storage/v1/object/public/')) {
     e.respondWith(
       caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+        // Don't cache opaque cross-origin failures, but DO cache 200s.
         if (res.ok) {
           const clone = res.clone();
           caches.open(CACHE).then(c => c.put(e.request, clone));
