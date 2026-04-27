@@ -86,6 +86,19 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
   .pc{padding:12px}
   .phase-card{padding:10px}
 }
+/* PDF modal */
+.pdf-modal{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;background:rgba(0,0,0,.85)}
+.pdf-modal[hidden]{display:none}
+.pdf-modal-bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--sb);border-bottom:1px solid var(--bd);flex-shrink:0}
+#pdf-modal-title{flex:1;font-size:13px;font-weight:700;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pdf-modal-bar a,.pdf-modal-bar button{background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--t2);padding:5px 12px;font:600 11px inherit;cursor:pointer;text-decoration:none;flex-shrink:0}
+.pdf-modal-bar a:hover,.pdf-modal-bar button:hover{border-color:var(--ac);color:var(--ac)}
+#pdf-modal-frame{flex:1;border:none;width:100%;background:#fff;min-height:0}
+@media(max-width:768px){
+  .pdf-modal-bar{padding:6px 10px;gap:6px}
+  .pdf-modal-bar a,.pdf-modal-bar button{padding:6px 10px;font-size:11px}
+  #pdf-modal-title{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -106,6 +119,14 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--t);d
   <div id="nv"></div>
 </div>
 <div id="mn"></div>
+<div id="pdf-modal" class="pdf-modal" hidden>
+  <div class="pdf-modal-bar">
+    <span id="pdf-modal-title"></span>
+    <a id="pdf-modal-newtab" href="#" target="_blank" rel="noopener" title="在新分頁開啟">↗ 新分頁</a>
+    <button onclick="closePDF()" title="關閉 (Esc)">✕</button>
+  </div>
+  <iframe id="pdf-modal-frame" src="about:blank" title="PDF viewer"></iframe>
+</div>
 <script type="module" src="src/app.js"></script>
 </body>
 </html>

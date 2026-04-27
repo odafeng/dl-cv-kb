@@ -17,8 +17,8 @@ export function pcHTML(p) {
   if (p.ax)  lk.push(`<a class="lb" href="https://arxiv.org/abs/${p.ax}" target="_blank" rel="noopener">arXiv↗</a>`);
   if (p.gh)  lk.push(`<a class="lb" href="https://github.com/${p.gh}" target="_blank" rel="noopener">GitHub↗</a>`);
   if (p.pmc) lk.push(`<a class="lb" href="https://pmc.ncbi.nlm.nih.gov/articles/${p.pmc}/" target="_blank" rel="noopener">PMC↗</a>`);
-  // Open PDF directly (browser native viewer handles rendering)
-  lk.push(`<a class="lb rb" href="./pdfs/${p.id}.pdf" target="_blank" rel="noopener">📖 開啟 PDF</a>`);
+  // Open PDF in modal overlay — bypasses PWA / mobile force-download behaviour
+  lk.push(`<button class="lb rb" onclick="openPDF('${p.id}')">📖 開啟 PDF</button>`);
 
   const priTag = p.pri
     ? `<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${p.pri===1?'rgba(255,180,100,.15)':'rgba(120,220,160,.12)'};color:${p.pri===1?'#ffb464':'#78dca0'};font-weight:700;margin-left:6px">${p.pri===1?'必讀':'推薦'}</span>`

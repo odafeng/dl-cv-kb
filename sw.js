@@ -1,6 +1,6 @@
 // Service Worker — offline caching for the static knowledge base
 // Cache version bumped any time precache list changes
-const CACHE = 'phd-kb-v5';
+const CACHE = 'phd-kb-v6';
 
 const PRECACHE = [
   './',
@@ -15,6 +15,7 @@ const PRECACHE = [
   './src/views.js',
   './src/nav.js',
   './src/graph.js',
+  './src/pdf-modal.js',
   // CDN assets that are stable enough to precache
   'https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js',
 ];

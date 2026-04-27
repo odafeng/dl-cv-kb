@@ -6,6 +6,7 @@
 // it's worth for a single-page viz.
 
 import { P, GRAPH_DATA, SECTION_COLORS, EDGE_COLORS } from './data.js';
+import { openPDF } from './pdf-modal.js';
 
 export function renderGraph() {
   const container = document.getElementById('graph-container');
@@ -58,7 +59,7 @@ export function renderGraph() {
     .attr('stroke', d => SECTION_COLORS[paperSec[d.id]] || '#666')
     .attr('stroke-width', 2)
     .attr('cursor', 'pointer')
-    .on('click', (_, d) => { window.open(`./pdfs/${d.id}.pdf`, '_blank', 'noopener'); });
+    .on('click', (_, d) => { openPDF(d.id); });
 
   node.filter(d => d.type === 'paper').append('text')
     .text(d => paperTitle[d.id] || d.id)

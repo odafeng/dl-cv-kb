@@ -8,6 +8,7 @@
 import { buildNav, showP, showS, toggleSB, doSearch } from './nav.js';
 import { showChapter, downloadChapterMD } from './views.js';
 import { toggleCk, initRowClickDelegation } from './checkboxes.js';
+import { openPDF, closePDF, initPDFModal } from './pdf-modal.js';
 
 // Inline onclicks in dynamically-rendered HTML need globals.
 // Keeping this surface small and explicit instead of letting it sprawl.
@@ -18,10 +19,13 @@ window.downloadChapterMD = downloadChapterMD;
 window.toggleSB         = toggleSB;
 window.doSearch         = doSearch;
 window.toggleCk         = toggleCk;
+window.openPDF          = openPDF;
+window.closePDF         = closePDF;
 
 // ----- Boot -----
 buildNav();
 initRowClickDelegation();
+initPDFModal();
 showP('overview');
 
 // ----- PWA -----
