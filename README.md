@@ -1,40 +1,56 @@
 # PhD Thesis Knowledge Base
 
-**機器人全直腸繫膜切除術之手術影像分析**  
+**機器人全直腸繫膜切除術之手術影像分析**
 Surgical Video Analytics for Robotic Total Mesorectal Excision
 
-PhD Thesis — NCKU Computer Science  
+PhD Thesis — NCKU Computer Science
 Author: Shih-Feng Huang, MD (黃士峯)
 
-## Setup
+---
 
-### 1. Supabase Storage
+## 架構
 
-在 Supabase Dashboard 建立一個 **public** storage bucket：
+純靜態網站，無後端依賴：
 
-- Bucket name: `phd-papers`
-- Public: ✅ (允許匿名讀取)
-- File size limit: 50MB
+- 21 篇文獻 metadata 與所有研究計畫內容寫死在 `src/data.js`
+- 21 個 PDF 直接放在 `pdfs/`，點擊「開啟 PDF」由瀏覽器原生 viewer 處理
+- 學習進度勾選狀態存在 `localStorage`（每台裝置獨立追蹤）
+- d3 知識圖譜走 CDN
 
-上傳 PDF 檔案時，命名規則：`{paper_id}.pdf`  
-例如：`surgenetxl.pdf`, `tecno.pdf`, `dacat.pdf`
-
-Paper ID 清單請參考 `index.html` 中的 `PAPERS` 陣列。
-
-### 2. 部署
-
-直接用 GitHub Pages 或任何靜態託管即可：
-
-```bash
-# GitHub Pages
-# Settings → Pages → Source: main branch, / (root)
+```
+PhD_Thesis/
+├── index.html          # HTML shell + CSS
+├── src/
+│   ├── app.js          # entry, wires modules + service worker
+│   ├── data.js         # papers, chapters, graph, all static content
+│   ├── store.js        # localStorage wrapper
+│   ├── checkboxes.js   # checkbox state binding
+│   ├── views.js        # render functions for all pages
+│   ├── nav.js          # sidebar, search, view switching
+│   └── graph.js        # d3 force-directed knowledge graph
+├── pdfs/               # 21 paper PDFs
+├── manifest.json       # PWA manifest
+├── sw.js               # service worker (precache + offline)
+└── icon-*.png          # app icons
 ```
 
-### 3. 使用
+## 部署
 
-- 左側選擇論文分類
-- 點擊「📖 閱讀 & 標記」開啟 PDF 閱讀器
-- 如果 Supabase 有該 PDF → 自動載入
-- 如果沒有 → 顯示上傳區域，上傳後自動存入 Supabase
-- 選取文字 → 選擇顏色 → 建立標記
-- 標記自動存入 Supabase Storage（`highlights/` 資料夾）
+GitHub Pages 直接 serve：
+
+```
+Settings → Pages → Source: main branch, / (root)
+```
+
+或本機開發：
+
+```bash
+python3 -m http.server 8000
+# 開 http://localhost:8000
+```
+
+ES modules 需要 HTTP serve（不能直接 `file://` 開啟）。
+
+## Cache 失效
+
+修改 `src/*.js` 後，sw.js 的 `CACHE` 版本號要 bump（`phd-kb-v5` → `v6`），否則使用者拿到舊版。
