@@ -7,6 +7,7 @@
 import { P, CHP, PHASES, LEARN_ROADMAP, PREREQS, PAPER_ROADMAP } from './data.js';
 import { applyCkState } from './checkboxes.js';
 import { renderGraph } from './graph.js';
+import { renderTimeline } from './timeline.js';
 
 const $ = id => document.getElementById(id);
 
@@ -44,6 +45,7 @@ export function renderP(id) {
   const m = $('mn');
   if (id === 'overview')        return renderOverview(m);
   if (id === 'graph')           return renderGraphPage(m);
+  if (id === 'timeline')        return renderTimelinePage(m);
   if (id === 'phases')          return renderPhasesPage(m);
   if (id === 'roadmap_learn')   return renderLearnRoadmap(m);
   if (id === 'prereqs')         return renderPrereqs(m);
@@ -90,6 +92,18 @@ function renderGraphPage(m) {
       <span style="font-size:11px;color:var(--t2)"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffd54f;margin-right:4px;opacity:.7"></span>共享概念</span>
     </div>`;
   renderGraph();
+}
+
+// ----- Tree of Life timeline -----
+function renderTimelinePage(m) {
+  m.innerHTML = `<h2>🌳 演化樹 (Tree of Life)</h2>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:10px">
+      X 軸 = 年份 · Y 軸 = 技術類別 · 連線 = 父→子論文血緣 ·
+      Hover 高亮整條 lineage · 點節點開 PDF · 滾輪縮放、拖曳平移
+    </div>
+    <div id="timeline-chips" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap"></div>
+    <div id="timeline-container" style="width:100%;height:calc(100vh - 200px);border:1px solid var(--bd);border-radius:10px;overflow:hidden;background:#0a0a14;position:relative"></div>`;
+  renderTimeline();
 }
 
 // ----- 9-phase schema -----

@@ -1,6 +1,6 @@
 // Service Worker — offline caching for the static knowledge base
 // Cache version bumped any time precache list changes
-const CACHE = 'phd-kb-v8';
+const CACHE = 'phd-kb-v9';
 
 const PRECACHE = [
   './',
@@ -16,6 +16,7 @@ const PRECACHE = [
   './src/views.js',
   './src/nav.js',
   './src/graph.js',
+  './src/timeline.js',
   './src/pdf-modal.js',
   // Modular data layer (new in v7)
   './src/data/index.js',
