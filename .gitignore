@@ -1,0 +1,13 @@
+# PDFs live in Supabase Storage now (bucket: papers).
+# If you re-clone PDFs locally for offline editing, keep them out of git.
+pdfs/
+*.pdf
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

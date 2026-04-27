@@ -6,10 +6,10 @@
 // behavior modules (pdf-modal), not data modules.
 
 // ----- PDF storage backend -----
-// Set USE_SUPABASE = true once papers/* is uploaded to Supabase.
-// While false, PDFs are served from ./pdfs/ in the repo.
-// This dual-mode lets us migrate without breaking the live site.
-export const USE_SUPABASE = false;
+// PDFs live in Supabase Storage (bucket `papers`, public-read RLS).
+// To roll back to local serving, set USE_SUPABASE = false and restore
+// the ./pdfs/ directory from git history.
+export const USE_SUPABASE = true;
 
 // Public Supabase project + anon key (safe to commit; bucket is public-read,
 // public is restricted via RLS to the `papers` bucket only).
