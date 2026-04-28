@@ -15,9 +15,14 @@ export function getView() { return currentView; }
 export function buildNav() {
   let h = '';
   PAGES.forEach(p => {
-    h += `<button class="nb" data-id="${p.id}" onclick="showP('${p.id}')">${p.icon} ${p.t}</button>`;
+    if (p.id.startsWith('_sep')) {
+      // Section header — same style as the "文獻分類" header below
+      h += `<div class="ns">${p.t}</div>`;
+    } else {
+      h += `<button class="nb" data-id="${p.id}" onclick="showP('${p.id}')">${p.icon} ${p.t}</button>`;
+    }
   });
-  h += `<div class="ns">文獻分類</div>`;
+  h += `<div class="ns">手術文獻分類</div>`;
   SEC_ORDER.forEach(s => {
     h += `<button class="nb" data-id="s_${s}" onclick="showS('${s}')">📄 ${s}</button>`;
   });

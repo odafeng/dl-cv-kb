@@ -1,7 +1,7 @@
 {
-  "name": "博士論文知識庫 — 手術影像分析",
-  "short_name": "PhD KB",
-  "description": "Surgical Video Analytics for Robotic TME",
+  "name": "DL/CV Knowledge Base — Deep Learning in Computer Vision",
+  "short_name": "DL/CV KB",
+  "description": "A curated knowledge base of foundational papers in deep learning for computer vision, with surgical AI applications",
   "start_url": "./index.html",
   "scope": ".",
   "display": "standalone",

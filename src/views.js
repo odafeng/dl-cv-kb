@@ -55,11 +55,54 @@ export function renderP(id) {
 }
 
 // ----- Overview -----
+// The overview leads with DL/CV scope and surfaces the surgical AI
+// application thread (PhD chapters) as a focused sub-module rather than
+// the main subject of the site.
 function renderOverview(m) {
-  m.innerHTML = `<h2>🎯 論文概覽</h2>
-    <div style="font-size:20px;font-weight:800;margin-bottom:3px">機器人全直腸繫膜切除術之手術影像分析</div>
-    <div style="font-size:12px;color:var(--mt);margin-bottom:18px">博士論文 — 成功大學資工系</div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">論文架構</div>
+  // Compute paper counts for the at-a-glance summary
+  const totalPapers = P.length;
+  const surgical = P.filter(p => p.domain === 'surgical').length;
+  const general  = P.filter(p => p.domain === 'general').length;
+  const yearMin = Math.min(...P.map(p => p.y));
+  const yearMax = Math.max(...P.map(p => p.y));
+  const edgeCount = P.reduce((s, p) => s + (p.parents || []).length, 0);
+
+  m.innerHTML = `<h2>🎯 概覽</h2>
+    <div style="font-size:20px;font-weight:800;margin-bottom:3px">Deep Learning in Computer Vision</div>
+    <div style="font-size:12px;color:var(--mt);margin-bottom:18px">
+      A curated map of foundational papers · ${yearMin}–${yearMax} · 黃士峯 整理
+    </div>
+
+    <div class="pc" style="margin-bottom:18px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+        <div><div style="font-size:22px;font-weight:800;color:var(--ac)">${totalPapers}</div>
+             <div style="font-size:11px;color:var(--mt)">論文總數</div></div>
+        <div><div style="font-size:22px;font-weight:800;color:#9d65ff">${general}</div>
+             <div style="font-size:11px;color:var(--mt)">通用 CV</div></div>
+        <div><div style="font-size:22px;font-weight:800;color:#ff9050">${surgical}</div>
+             <div style="font-size:11px;color:var(--mt)">手術 AI 應用</div></div>
+        <div><div style="font-size:22px;font-weight:800;color:#78dca0">${edgeCount}</div>
+             <div style="font-size:11px;color:var(--mt)">血緣連線</div></div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">本站怎麼用</div>
+    <div class="pc" style="margin-bottom:18px">${[
+      ["🌳", "演化樹", "從 LeNet (1998) 一路看到 SAM2 / 手術 FM (2026)，hover 高亮 lineage，路徑模式追蹤兩 paper 之間的演化鏈"],
+      ["🕸️", "知識圖譜", "Force-directed concept graph，看 paper 之間共享的研究主題"],
+      ["🏷️", "標籤索引", "206 個 tag 依類別分組，挖掘跨 cat 的概念連結"],
+      ["🔍", "搜尋", "預設手術專區，可切到通用 CV 或全部"],
+    ].map(([ic, t, d]) => `
+      <div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">
+        <span style="font-size:16px">${ic}</span>
+        <div><div style="font-size:12px;font-weight:700;color:var(--t)">${t}</div>
+             <div style="font-size:11.5px;color:var(--t2);margin-top:1px">${d}</div></div>
+      </div>`).join('')}</div>
+
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">🏥 Surgical AI 應用次模組</div>
+    <div style="font-size:11.5px;color:var(--t2);margin-bottom:10px">
+      機器人全直腸繫膜切除術之手術影像分析 · 博士論文研究主軸
+    </div>
     ${CHP.map(ch => `
       <div class="pc" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="showChapter(${ch.n})">
         <div class="phase-num" style="color:${ch.color};background:${ch.color}18">${ch.n}</div>
@@ -70,14 +113,7 @@ function renderOverview(m) {
           <div style="font-size:11.5px;color:var(--t2);margin-top:1px">${ch.q.slice(0,50)}...</div>
         </div>
         <span style="color:var(--mt);font-size:14px">›</span>
-      </div>`).join('')}
-    <div style="font-size:13px;font-weight:700;margin:16px 0 8px">競爭優勢</div>
-    <div class="pc">${[
-      "約100台達文西TME影像＋9階段標註",
-      "全球首個機器人TME階段辨識資料集",
-      "大腸直腸外科專科醫師擔任專家標註者",
-      "結合ctpelvimetry術前評估＋PostOp PWA術後照護"
-    ].map(a => `<div style="display:flex;gap:7px;margin-bottom:4px"><span style="color:var(--ac);font-weight:700;font-size:12px">→</span><span style="font-size:12px;color:var(--t2)">${a}</span></div>`).join('')}</div>`;
+      </div>`).join('')}`;
 }
 
 // ----- Knowledge graph page -----
