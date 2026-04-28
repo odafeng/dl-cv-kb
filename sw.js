@@ -1,6 +1,6 @@
 // Service Worker — offline caching for the static knowledge base
 // Cache version bumped any time precache list changes
-const CACHE = 'phd-kb-v9';
+const CACHE = 'phd-kb-v10';
 
 const PRECACHE = [
   './',
@@ -18,7 +18,7 @@ const PRECACHE = [
   './src/graph.js',
   './src/timeline.js',
   './src/pdf-modal.js',
-  // Modular data layer (new in v7)
+  // Modular data layer
   './src/data/index.js',
   './src/data/categories.js',
   './src/data/chapters.js',
@@ -27,6 +27,15 @@ const PRECACHE = [
   './src/data/graph.js',
   './src/data/papers/index.js',
   './src/data/papers/surgical.js',
+  // DL-in-CV reference paper categories (Phase 3b)
+  './src/data/papers/architecture.js',
+  './src/data/papers/ssl.js',
+  './src/data/papers/semisl.js',
+  './src/data/papers/segmentation.js',
+  './src/data/papers/detection.js',
+  './src/data/papers/generative.js',
+  './src/data/papers/vlm.js',
+  './src/data/papers/video.js',
   // CDN assets that are stable enough to precache
   'https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js',
 ];

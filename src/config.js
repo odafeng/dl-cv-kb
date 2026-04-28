@@ -21,13 +21,27 @@ export const SUPABASE = {
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4em13endvcWdwd25veGZod2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyOTg3NzMsImV4cCI6MjA5Mjg3NDc3M30.BoVwPk1_EL2q0-bp5FLRWfzlzEBukG6tAvYH9CmkagI",
 };
 
-// ----- Resolve a paper id to its PDF URL -----
-// Switching backends is a one-line edit (USE_SUPABASE).
-// Future: per-paper override via paper.pdfUrl if a few PDFs need to live
-// elsewhere (paywalled / private), but YAGNI until it actually happens.
-export function pdfUrlFor(id) {
-  if (USE_SUPABASE) {
-    return `${SUPABASE.url}/storage/v1/object/public/${SUPABASE.bucket}/${id}.pdf`;
+// ----- Resolve a paper to its PDF URL -----
+// Surgical-domain papers live in Supabase Storage (we curated those).
+// General DL-in-CV reference papers fall back to arXiv (iframe-friendly).
+// Anything else falls back to DOI resolver as last resort.
+//
+// Backward-compat: if called with a string id (not paper object) we
+// assume Supabase + that id, matching pre-3b behavior.
+export function pdfUrlFor(idOrPaper) {
+  // Legacy string-id path
+  if (typeof idOrPaper === 'string') {
+    return `${SUPABASE.url}/storage/v1/object/public/${SUPABASE.bucket}/${idOrPaper}.pdf`;
   }
-  return `./pdfs/${id}.pdf`;
+
+  const p = idOrPaper;
+  // Local Supabase: explicit `local: true` OR surgical-domain default
+  const useLocal = p.local === true || (p.local !== false && p.domain === 'surgical');
+
+  if (USE_SUPABASE && useLocal) {
+    return `${SUPABASE.url}/storage/v1/object/public/${SUPABASE.bucket}/${p.id}.pdf`;
+  }
+  if (p.ax)  return `https://arxiv.org/pdf/${p.ax}.pdf`;
+  if (p.doi) return `https://doi.org/${p.doi}`;
+  return null;  // Caller (pdf-modal) shows "no PDF available" message
 }

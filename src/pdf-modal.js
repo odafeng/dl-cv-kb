@@ -13,13 +13,29 @@ const $ = id => document.getElementById(id);
 
 export function openPDF(id) {
   const p = P.find(pp => pp.id === id);
-  const url = pdfUrlFor(id);
-  const title = p?.t || id;
+  if (!p) {
+    console.warn('openPDF: unknown paper id', id);
+    return;
+  }
+  const url = pdfUrlFor(p);
+  const title = p.t || id;
 
   $('pdf-modal-title').textContent = title;
-  $('pdf-modal-newtab').href = url;
-  // Set src last so the iframe starts loading after labels are in place
-  $('pdf-modal-frame').src = url;
+
+  if (!url) {
+    // No PDF source resolvable — at least show the metadata
+    $('pdf-modal-newtab').href = '#';
+    $('pdf-modal-frame').srcdoc = `
+      <div style="font-family:sans-serif;padding:40px;color:#888;text-align:center">
+        <p>此論文無可用的 PDF 連結。</p>
+        ${p.gh ? `<p><a href="https://github.com/${p.gh}" target="_blank">GitHub: ${p.gh}</a></p>` : ''}
+      </div>`;
+  } else {
+    $('pdf-modal-newtab').href = url;
+    // Set src last so the iframe starts loading after labels are in place
+    $('pdf-modal-frame').removeAttribute('srcdoc');
+    $('pdf-modal-frame').src = url;
+  }
   $('pdf-modal').hidden = false;
   document.body.style.overflow = 'hidden';
 }

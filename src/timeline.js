@@ -17,8 +17,9 @@ const NODE_R_DEFAULT = 5;
 
 // State that persists across the renderTimeline() lifecycle.
 // Module-scoped so the chip click handler can read it.
-let filterState = null;  // Set<cat>
-let nodeSel, edgeSel;    // d3 selections, set in renderTimeline
+let filterState = null;     // Set<cat>
+let surgicalOnly = false;   // when true, dim non-surgical to ~25%
+let nodeSel, edgeSel;       // d3 selections, set in renderTimeline
 
 // ============================================================
 // Public entry point
@@ -54,6 +55,7 @@ export function renderTimeline() {
   }
 
   filterState = new Set(catsPresent);
+  surgicalOnly = false;
 
   // ----- Scales -----
   const yearExt = d3.extent(P, p => p.y);
@@ -303,19 +305,31 @@ function lineageOf(id) {
 
 function applyFilter() {
   if (!nodeSel || !edgeSel) return;
-  nodeSel.style('opacity', d => filterState.has(d.cat) ? 1 : 0.08);
+  const visible = d => filterState.has(d.cat) && (!surgicalOnly || d.domain === 'surgical');
+  nodeSel.style('opacity', d => visible(d) ? 1 : (surgicalOnly && filterState.has(d.cat) ? 0.18 : 0.08));
   edgeSel
     .attr('stroke', 'var(--bd)').attr('stroke-width', 1.4)
-    .attr('opacity', e =>
-      filterState.has(e.source.cat) && filterState.has(e.target.cat) ? 0.65 : 0.05
-    );
+    .attr('opacity', e => {
+      const sV = visible(e.source), tV = visible(e.target);
+      if (sV && tV) return 0.65;
+      // In surgical-only mode, keep "leads-to-surgical" edges faintly visible
+      if (surgicalOnly && (e.target.domain === 'surgical' || e.source.domain === 'surgical')) return 0.25;
+      return 0.05;
+    });
 }
 
 function buildChipBar(catsPresent) {
   const chipBar = document.getElementById('timeline-chips');
   if (!chipBar) return;
 
-  chipBar.innerHTML = catsPresent.map(c => {
+  // Surgical-only toggle (separate from cat filter chips)
+  const surgicalToggle = `<button class="tl-surg-toggle"
+    style="background:transparent;border:1px dashed #ff905077;color:#ff9050;
+    padding:4px 12px;border-radius:14px;font-size:11px;cursor:pointer;font-weight:700;
+    transition:all .15s;margin-right:8px">
+    🏥 Surgical only</button>`;
+
+  const chips = catsPresent.map(c => {
     const cfg = CATS[c];
     const count = P.filter(p => p.cat === c).length;
     return `<button class="tl-chip" data-cat="${c}"
@@ -325,6 +339,9 @@ function buildChipBar(catsPresent) {
       ${cfg.icon} ${c} (${count})</button>`;
   }).join('');
 
+  chipBar.innerHTML = surgicalToggle + chips;
+
+  // Cat filter chips
   chipBar.querySelectorAll('.tl-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       const cat = btn.dataset.cat;
@@ -337,6 +354,14 @@ function buildChipBar(catsPresent) {
       }
       applyFilter();
     });
+  });
+
+  // Surgical-only toggle
+  chipBar.querySelector('.tl-surg-toggle').addEventListener('click', e => {
+    surgicalOnly = !surgicalOnly;
+    e.target.style.background = surgicalOnly ? '#ff905033' : 'transparent';
+    e.target.style.borderStyle = surgicalOnly ? 'solid' : 'dashed';
+    applyFilter();
   });
 }
 
