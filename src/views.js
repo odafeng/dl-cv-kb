@@ -101,7 +101,7 @@ function renderOverview(m) {
 
     <div style="font-size:13px;font-weight:700;margin-bottom:8px">🏥 Surgical AI 應用次模組</div>
     <div style="font-size:11.5px;color:var(--t2);margin-bottom:10px">
-      機器人全直腸繫膜切除術之手術影像分析 · 博士論文研究主軸
+      機器人全直腸繫膜切除術之手術影像分析
     </div>
     ${CHP.map(ch => `
       <div class="pc" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="showChapter(${ch.n})">
