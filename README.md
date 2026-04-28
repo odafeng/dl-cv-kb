@@ -2,7 +2,7 @@
 
 > A curated map of foundational papers in **deep learning for computer vision**, from LeNet (1998) to current-gen surgical foundation models (2026). Built as an interactive, offline-first PWA — no backend, no auth, just the lineage tree visible at a glance.
 
-**Author**: 黃士峯 Shih-Feng Huang, MD · NCKU CS PhD candidate · 高榮大腸直腸外科主治醫師
+**Author**: 黃士峯 Shih-Feng Huang, MD · 高榮大腸直腸外科主治醫師
 **Live site**: https://odafeng.github.io/dl-cv-kb/
 
 ---
