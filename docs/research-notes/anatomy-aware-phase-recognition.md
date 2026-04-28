@@ -1,8 +1,8 @@
 # Anatomy-Aware Surgical Phase Recognition
 
 > **Status**: Research note / brainstorm
-> **Last updated**: 2026-04
-> **Tags**: surgical phase recognition, multi-task learning, explainable AI, long-duration video
+> **Last updated**: 2026-04 (revised to incorporate action triplet prior art)
+> **Tags**: surgical phase recognition, multi-task learning, action triplets, explainable AI, long-duration video
 
 A note on a research direction that emerged from reading LoViT (Liu et al., *Medical Image Analysis* 2025) and thinking about how phase recognition methods would (and would not) generalize to long-duration robotic procedures.
 
@@ -36,170 +36,158 @@ There's a missing third path.
 
 ---
 
-## The intuition: anatomy *is* the phase definition
+## The intuition: phases are defined by what's happening, not how it looks
 
-The whole framing of "spatial features + temporal model" treats phase recognition as a generic video classification task. But in reality, surgical phase boundaries are **defined by anatomy**, not by visual texture statistics:
+The standard "spatial features + temporal model" framing treats phase recognition as a generic video classification task. But surgical phase boundaries are **defined by surgical activity** — what instrument is doing what to which anatomy — not by visual texture statistics:
 
 - A surgeon doesn't think "I'm in phase 4 because the pixel distribution looks 92% similar to phase 4 training data."
-- A surgeon thinks "I just exposed the holy plane, so I'm now doing mesorectal dissection."
+- A surgeon thinks "I just exposed the holy plane, energy device is dissecting posteriorly along the mesorectal fascia, helper is retracting the rectum anteriorly — this is phase 4."
 
-If the model also operated on anatomical structures rather than raw visual features, several things would simultaneously improve:
+That perceptual logic decomposes naturally into three components:
 
-1. **Explainability** — predictions can be grounded in detected structures, not opaque attention scores
-2. **Cross-procedure transferability** — IMA looks like IMA whether you're doing colectomy or TME
-3. **Annotation efficiency** — anatomy detection needs ~500 well-chosen frames vs. tens of thousands of frame-level phase labels
-4. **Reduced reliance on heavy temporal modeling** — anatomy presence is a much stronger per-frame signal than raw RGB
+```
+Anatomy (where):    holy plane / mesorectal fascia visible
+Instrument (what):  monopolar / energy device active near the plane
+Action (how):       dissecting (not retracting, not coagulating)
+```
+
+Each component on its own is ambiguous — the same anatomy appears in multiple phases, the same instrument is used across many phases — but the **co-occurrence** is highly phase-specific. Two adjacent phases that share anatomy (e.g., posterior vs. anterior mesorectal dissection) become separable once instrument position relative to that anatomy is taken into account.
+
+This decomposition is not a new observation. It's the framing behind the **surgical action triplet** literature.
 
 ---
 
-## A naive version (and why it fails)
+## Prior art: what's already been done
 
-```
-Frame → Object detector → "IMA detected" → Rule: "if IMA detected, transition to phase 2"
-```
+This space has a lot of existing work that any new proposal needs to position against carefully.
 
-This is the obvious first idea, but it has four breakdowns:
+### Multi-task learning with auxiliary tool/anatomy supervision
 
-1. **Object appearance ≠ phase transition.** IMA might flash by 10 minutes before the surgeon actually starts working on it.
-2. **Detection noise.** A single false positive can mistrigger a phase transition that propagates errors through the rest of the video.
-3. **Phases aren't 1:1 with anatomy.** Two adjacent phases might both involve the same structure (anterior vs. posterior dissection on the mesorectal plane).
-4. **Missed detections cascade.** Unlike traditional phase recognition where one bad frame is forgivable, missing a key transition event ruins everything downstream.
+The earliest line, going back ~10 years:
 
-So pure rule-based event-driven recognition is too brittle. But the underlying intuition — that anatomy should be central — is sound.
+- **EndoNet** (Twinanda et al., *IEEE TMI* 2017) — joint phase + tool presence (binary multi-label), single CNN, no temporal model. The original multi-task baseline.
+- **TeCNO / OperA** (Czempiel et al., *MICCAI* 2020-2021) — phase + tool presence + temporal convolution / attention.
+- **Mondal et al.** (arXiv:1905.08315, 2018) — adds an explicit joint-distribution loss capturing tool–phase co-occurrence.
+- **Fuentes-Hurtado et al.** ("Data-centric multi-task surgical phase estimation with sparse scene segmentation," 2022) — extends auxiliary supervision from tool presence to **scene segmentation including both instruments and anatomy**. Closest predecessor to anything one would want to propose along these lines.
 
----
+The conclusion from this line of work is that auxiliary tool/anatomy supervision **helps** phase recognition modestly but is not transformative on Cholec80. The framing has been thoroughly explored.
 
-## A better version: anatomy as auxiliary supervision
+### Surgical action triplets (CAMMA group line)
 
-Instead of "detect anatomy → rule → phase," do:
+A more structured approach, treating each frame's activity as ⟨**instrument**, **verb**, **target**⟩:
 
-```
-                ┌─→ Anatomy detection head: {IMA, ureter, hypogastric_n, ...}
-Frame → Backbone│
-                └─→ Phase classification head: {phase 1, ..., phase 9}
+- **Nwoye et al.** (*MICCAI* 2020) — first to formalize action triplet recognition.
+- **Rendezvous** (Nwoye et al., *Medical Image Analysis* 2022) — Transformer with self- and cross-attention over instrument / verb / target heads. Released the **CholecT50** dataset (50 cholecystectomy videos with 100 triplet classes drawn from 6 instruments × 10 verbs × 15 targets).
+- **CholecTriplet 2021 / 2022 / 2024** — recurring MICCAI challenges benchmarking triplet recognition. CholecTriplet 2022 added instrument tip bounding boxes.
+- **CurConMix+** (arXiv:2601.12312, 2026) — current state-of-the-art on CholecT45 frame-level triplet recognition.
 
-Loss = phase_CE + λ × anatomy_BCE
-```
+Action triplets are the closest existing formalization of "instrument acting on anatomy" that this note's direction would build on. The CAMMA team has essentially owned this sub-field for 5+ years.
 
-Both heads share the spatial backbone. The anatomy head is a multi-label binary classifier (or detector) with bounding boxes over key structures. The phase head is the standard frame-wise classifier you'd have anyway.
+### Geometric / spatial relationship between instrument and anatomy
 
-The auxiliary anatomy loss does several things:
-- Forces the backbone to learn anatomy-relevant features rather than overfitting to procedure-specific visual texture
-- Provides a regularizing signal that's much denser than phase labels (anatomy presence/absence on every frame, vs. phase labels that are constant across long stretches)
-- Gives an interpretable channel: at inference, you can show *which anatomical structures the model detected* alongside the phase prediction
+A newer angle:
 
-This is **not novel as a general technique** — multi-task learning with auxiliary tool/instrument detection has been done since EndoNet (Twinanda et al., 2017) and is implicit in Trans-SVNet's tool prediction head. What's underexplored is:
+- **Geo-RepNet** (arXiv:2507.09294, 2025) — uses depth estimation to derive spatial relationships between tools and tissue, evaluated on ESD (endoscopic submucosal dissection). Demonstrates that *where* an instrument is relative to anatomy carries phase information beyond mere co-occurrence.
 
-- Doing it with **anatomical structures** rather than instruments (most prior work uses instruments because they're easier to label)
-- Doing it on **long procedures** where the temporal model alone is insufficient
-- Doing it specifically for **TME** where the anatomical landmarks (mesorectal plane, hypogastric nerve, seminal vesicle, levator ani) are well-defined and clinically meaningful
+This is the most recent and most relevant prior work, but it's narrowly scoped to ESD and uses depth as the geometric signal.
+
+### Holistic multi-level surgical understanding
+
+- **PSI-AVA benchmark** (arXiv:2212.04582, 2022) — joint phase + step + instrument + atomic visual action recognition, on robot-assisted radical prostatectomy. Demonstrates the "holistic understanding" framing.
 
 ---
 
-## What this would look like in practice
+## Where the actual gap is
 
-### Stage 1: Anatomy detector
+Reading the prior art, the genuinely under-explored areas are not the multi-task framing itself (well-trodden) or triplet recognition itself (a thriving sub-field with annual challenges) — they are:
 
-Train a YOLO-family or DETR-family detector on a curated set of frames with bounding boxes for ~10 key TME structures:
+1. **Triplet vocabulary for procedures other than cholecystectomy.** CholecT50's instruments and targets are cholecystectomy-specific. Robotic TME has different instruments (robotic monopolar, robotic vessel sealer, robotic stapler), different targets (mesorectal fascia, hypogastric nerve, levator ani, seminal vesicle, prostate), and different verbs (medial-to-lateral mobilization, TME plane dissection, anastomosis fashioning).
 
-- IMA (inferior mesenteric artery) and its pedicle
-- IMV (inferior mesenteric vein)
-- Left ureter
-- Hypogastric nerve
-- Mesorectal fascia (anterior/posterior)
-- Denonvilliers' fascia / rectovaginal septum
-- Seminal vesicle / posterior vaginal wall
-- Levator ani plane
-- Hartmann's pouch (during specimen retrieval)
-- Anastomosis ring (during reconstruction)
+2. **Triplet recognition under long-procedure constraints.** All published triplet methods are validated on Cholec80-length videos. The interaction between long-range temporal context and triplet recognition is unexplored.
 
-Annotation cost is the bottleneck but tractable: ~500-1000 frames sampled across phases, annotated by a colorectal surgeon. SAM2 can accelerate the bbox-to-mask step if needed.
+3. **Triplet predictions as structured intermediate representation for phase recognition.** Most existing work either predicts triplets *as the end task* (CAMMA line) or predicts phases with anatomy/tool as auxiliary signal (EndoNet line). Treating triplet predictions as an explicit, interpretable intermediate that feeds a downstream phase classifier — and exploiting this for offline phase smoothing on long videos — is a less-explored framing.
 
-### Stage 2: Anatomy-aware phase model
+4. **Spatial relationships using non-depth signals.** Geo-RepNet uses depth estimation, which is fragile. Using bounding-box overlap, instrument trajectory relative to anatomy regions, or learned spatial embeddings is an alternative geometric channel.
 
-Two designs are worth comparing:
+5. **Cross-procedure triplet transfer.** Whether a triplet model trained on cholecystectomy provides useful initialization for TME triplet recognition is unknown but relevant.
 
-**A. Single backbone, two heads (multi-task)**
-```
-Backbone (frozen SurgeNetXL) → 768-d feature
-                                  ├─ Anatomy head (multi-label sigmoid)
-                                  └─ Phase head (softmax over 9 phases)
-```
+---
 
-**B. Cascaded (anatomy detection feeds phase model)**
+## A direction worth thinking through
+
+If a project were going to build along this line, the structure that seems most defensible is:
+
+### Stage 1: TME-specific triplet vocabulary
+
+Define ⟨instrument, verb, target⟩ classes adapted to robotic TME. Rough scale:
+
+- Instruments (~8): robotic monopolar shears, robotic bipolar forceps, robotic vessel sealer, robotic stapler, robotic suction-irrigator, robotic needle holder, large clip applier, retraction grasper
+- Verbs (~10): retract, dissect, coagulate, cut, ligate, clip, staple, suction, irrigate, suture
+- Targets (~15): IMA pedicle, IMV, left ureter, hypogastric nerve, mesorectal fascia (anterior/posterior), Denonvilliers' fascia, seminal vesicle, prostate, levator ani, rectum, anastomosis ring, retracted small bowel, omentum, pelvic sidewall
+
+Cross-product is ~1200 combinations but only ~50-80 are clinically valid (most don't make sense — you don't suction the IMA pedicle, you don't staple the ureter). Following the Nwoye approach, only the valid combinations are kept as triplet classes.
+
+Annotation strategy: borrow CholecT50's frame-level binary multi-label format. Annotate ~500-1000 frames per case across ~30-50 cases initially. Pure single-annotator effort is roughly 200-400 hours.
+
+### Stage 2: Triplet detector
+
+Standard backbone (SurgeNetXL or DINOv2 frozen) + three heads:
+
 ```
 Backbone → spatial feature
-        → anatomy detector → {set of detected structures, confidence scores}
-                                                ↓
-                              concatenate with spatial feature
-                                                ↓
-                                  bidirectional GRU (offline)
-                                                ↓
-                                          phase prediction
+        ├─ Instrument head: multi-label sigmoid + (optional) bbox
+        ├─ Verb head:       multi-label sigmoid
+        └─ Target head:     multi-label sigmoid + (optional) bbox
+
+Triplet association: cross-attention or matching head, following Rendezvous
 ```
 
-Design B is cleaner conceptually (anatomy is a real intermediate representation) but cascades errors. Design A optimizes both jointly but requires careful loss balancing. Worth ablating both.
+Pretraining on CholecT50 followed by TME fine-tuning is worth comparing against TME-only training to assess transfer.
 
-### Stage 3: Offline temporal smoothing
+### Stage 3: Triplet-guided phase recognition
 
-Either design produces per-frame phase scores. A lightweight bidirectional GRU (or even a simple HMM) over the score sequence smooths phase boundaries. Because we're operating offline, we can use future-frame context — which on long procedures is substantially more informative than on Cholec80.
+Instead of running a heavy temporal model on raw spatial features, run a light model on the **predicted triplet sequence**:
 
----
+```
+Per-frame triplet predictions: [t_1, t_2, ..., t_T]
+where each t_i is a sparse vector over triplet classes
 
-## What this changes about the long-video problem
+→ Bidirectional GRU (offline) or HMM smoothing
+→ Phase prediction
+```
 
-Reframing phase recognition as "anatomy detection + light temporal smoothing" sidesteps most of the GPU-memory hell that motivates LoViT's two-stage design:
+The information bottleneck is intentional: instead of forcing the temporal model to attend over 768-d visual features across 18,000 frames, it operates on a much sparser, more interpretable representation. GPU memory and compute concerns largely evaporate.
 
-| Problem | Heavy-temporal approach | Anatomy-aware approach |
-|---|---|---|
-| Spatial backbone at scale | ViT clip-pretraining workaround | Use frozen SurgeNetXL, no special pretraining |
-| Long-sequence attention | ProbSparse / Mamba / chunking tricks | Light GRU on per-frame scores; no attention bottleneck |
-| GPU memory peak | 30-50 GB on long video | 8-12 GB |
-| Explainability | Attention maps (limited) | Detected anatomy bounding boxes (direct) |
-| Cross-center transfer | Risky (texture-specific features) | More robust (anatomy is anatomy) |
+### What this trades off
 
-The trade-off: this approach won't beat LoViT/DACAT on Cholec80 — short procedures don't need anatomy context to do well, and pure visual features are sufficient. The advantage shows up specifically on long, anatomically structured procedures.
+- **Probably worse on Cholec80**: short procedures don't benefit enough from triplet structure to outweigh the loss of direct visual signal. The story has to live in the long-procedure regime.
+- **Annotation cost**: triplet annotation is more demanding than phase-only annotation. The hope is that triplet labels are reusable across multiple downstream tasks (phase recognition, skill assessment, automated reporting), amortizing the cost.
+- **Compounding errors**: triplet detector errors propagate to phase prediction. End-to-end training can mitigate but reintroduces some of the GPU memory issue.
 
 ---
 
 ## Open questions
 
-Things I haven't worked out and would want to investigate:
-
-1. **What's the right anatomy granularity?** 5 structures? 20? Too few and the auxiliary signal is weak; too many and annotation becomes intractable.
-2. **How does anatomy detection accuracy degrade across operators?** A 65-year-old surgeon's IMA exposure technique looks different from a 35-year-old's. Does this break detection generalization?
-3. **Is bbox enough, or do we need segmentation?** Segmentation is more informative but 10× more annotation cost.
-4. **How does this interact with cross-center generalization?** Anatomy looks more consistent across centers than procedure-specific visual texture, but lighting/camera/equipment differences still exist.
-5. **Does the auxiliary loss actually help on Cholec80 too?** If yes, it's a general method; if no, it's a long-procedure-specific method. Both framings are publishable but they're different stories.
+1. **Is triplet vocabulary the right abstraction for TME, or is something coarser/finer better?** Maybe ⟨instrument, anatomical region⟩ pairs without a verb dimension is sufficient. Maybe a 4-tuple including hand-laterality is needed.
+2. **Does cross-procedure triplet transfer actually work?** A model pretrained on CholecT50 might or might not provide useful initialization.
+3. **How does triplet-guided phase recognition compare to direct phase recognition with triplet auxiliary loss?** Two architecturally different ways to use the same information.
+4. **What's the right granularity for spatial relationships?** Bounding-box overlap, instrument-tip-to-target distance, or learned spatial embeddings — each has different annotation requirements.
+5. **Does this hold up cross-center?** Anatomy and instruments are more consistent across centers than visual texture, but operative style varies substantially between surgeons.
 
 ---
 
-## Related work to position against
+## Summary
 
-- **Twinanda et al., EndoNet** (IEEE TMI 2017) — earliest multi-task spatial recognition for surgical phase, used tool presence as auxiliary task
-- **Czempiel et al., TeCNO / Opera** — multi-task phase + tool recognition with TCN
-- **LoViT** (Liu et al., MedIA 2025) — heavy temporal modeling, no anatomy supervision
-- **Kitaguchi et al.** (Surg Endosc 2020, 2022) — frame-only CNN for sigmoidectomy and TaTME, no temporal model
-- **MS-AST / SurgPLAN++** — explicit online vs offline framing for phase recognition
-- **MuST** (BCV-Uniandes, MICCAI 2024) — multi-scale Transformers, PhaKIR 2024 winner
-- **SurgVISTA / SurgMotion** — video-native surgical foundation models, the next-generation paradigm
+Multi-task learning with anatomy/instrument auxiliary supervision is not novel — it goes back to EndoNet (2017) and has been studied extensively. Action triplet recognition is a thriving sub-field with its own benchmarks (CholecT50, CholecTriplet challenges) and current SOTA work (CurConMix+ 2026).
 
-The anatomy-aware angle sits between "tool-presence multi-task learning" (which is well-established) and "instrument segmentation as primary task" (which is a different research line). The specific combination of *anatomical-structure* auxiliary supervision + *long-procedure* setting + *offline* inference is the gap.
+The genuinely open territory is the intersection of three constraints that no existing work simultaneously addresses:
 
----
+- **Long procedures** (5+ hours, where current temporal models break)
+- **Procedure-specific triplet vocabulary** (TME-specific anatomy and instruments)
+- **Triplet predictions as structured input to phase recognition** (rather than triplet recognition as the end task)
 
-## Why this is worth pursuing
-
-Three reasons this idea feels like it has more substance than the typical "let me apply method X to procedure Y" angle:
-
-1. **It's grounded in surgical reasoning.** Surgeons explicitly track anatomy; building a model around what experts actually pay attention to is more principled than chasing benchmark accuracy on visual feature distributions.
-
-2. **It threads multiple research arcs together.** Anatomy detection feeds plane segmentation feeds anatomy-driven navigation — all three become part of one story rather than disconnected projects.
-
-3. **It survives the long-procedure constraint without heroic engineering.** The whole framing makes the GPU-memory problem secondary rather than central.
-
-The honest risk is that on standard short-procedure benchmarks (Cholec80, AutoLaparo) this approach won't outperform existing temporal-heavy methods, and the contribution rests entirely on the long-procedure setting. That's a narrow story, but it's a real one — and one that nobody else is currently telling.
+Whether that intersection is large enough to support a substantive research contribution depends on details that experiments would have to surface. But the framing connects naturally to existing literature, builds on rather than ignores prior art, and aligns with the clinical reasoning surgeons actually use.
 
 ---
 
-*This is a working note, not a finished proposal. Architecture choices, baseline comparisons, and dataset specifics will likely shift as the experiments unfold.*
+*This is a working note, not a finished proposal. Architecture choices, baseline comparisons, dataset specifics, and even the core framing will likely shift as the experiments unfold.*
