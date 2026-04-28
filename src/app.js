@@ -5,7 +5,7 @@
 // that inline `onclick` attributes in rendered HTML still rely on,
 // and registers the service worker.
 
-import { buildNav, showP, showS, toggleSB, doSearch } from './nav.js';
+import { buildNav, showP, showS, toggleSB, doSearch, setSearchDomain } from './nav.js';
 import { showChapter, downloadChapterMD } from './views.js';
 import { toggleCk, initRowClickDelegation } from './checkboxes.js';
 import { openPDF, closePDF, initPDFModal } from './pdf-modal.js';
@@ -18,6 +18,7 @@ window.showChapter      = showChapter;
 window.downloadChapterMD = downloadChapterMD;
 window.toggleSB         = toggleSB;
 window.doSearch         = doSearch;
+window.setSearchDomain  = setSearchDomain;
 window.toggleCk         = toggleCk;
 window.openPDF          = openPDF;
 window.closePDF         = closePDF;

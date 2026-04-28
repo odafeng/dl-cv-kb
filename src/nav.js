@@ -62,6 +62,13 @@ export function showS(s) {
 }
 
 // ----- Search -----
+// Domain filter persists across searches. Default to surgical-only since
+// this KB started life as a PhD thesis tool — generalist papers are
+// reference material, not the primary haystack.
+let searchDomain = 'surgical';
+
+export function setSearchDomain(d) { searchDomain = d; }
+
 export function doSearch(q) {
   // Sync both search inputs
   if ($('ssearch').value !== q) $('ssearch').value = q;
@@ -75,21 +82,59 @@ export function doSearch(q) {
     return;
   }
 
-  const results = P.filter(p => {
-    const hay = [p.t, p.a, p.v, p.n, p.s, ...p.tg].join(' ').toLowerCase();
-    return q.split(/\s+/).every(w => hay.includes(w));
-  });
+  // Match against text first, then narrow by domain.
+  // Sort: pri 1 (must-read) → pri 2 → others; ties broken by year desc.
+  const results = P
+    .filter(p => {
+      if (searchDomain !== 'all' && p.domain !== searchDomain) return false;
+      const hay = [p.t, p.a, p.v, p.n, p.s, ...(p.tg || []), p.cat, p.sub]
+        .filter(Boolean).join(' ').toLowerCase();
+      return q.split(/\s+/).every(w => hay.includes(w));
+    })
+    .sort((a, b) => (a.pri || 9) - (b.pri || 9) || (b.y || 0) - (a.y || 0));
 
   const m = $('mn');
   m.style.display = 'block';
 
+  // Domain filter chip bar — sits above the results
+  const counts = {
+    surgical: P.filter(p => p.domain === 'surgical' && matchText(p, q)).length,
+    general:  P.filter(p => p.domain === 'general'  && matchText(p, q)).length,
+  };
+  const chip = (val, label, n) => {
+    const active = searchDomain === val;
+    return `<button onclick="setSearchDomain('${val}');doSearch('${escapeAttr(q)}')"
+      style="background:${active?'var(--ac)':'transparent'};color:${active?'#fff':'var(--t2)'};
+      border:1px solid ${active?'var(--ac)':'var(--bd)'};padding:4px 12px;border-radius:14px;
+      font-size:11px;cursor:pointer;font-weight:600;margin-right:6px">
+      ${label} (${n})</button>`;
+  };
+  const filterBar = `<div style="margin-bottom:14px">
+    ${chip('surgical', '🏥 手術專區', counts.surgical)}
+    ${chip('general',  '🌐 通用 CV', counts.general)}
+    ${chip('all',      '📚 全部', counts.surgical + counts.general)}
+  </div>`;
+
   if (!results.length) {
-    m.innerHTML = `<h2>🔍 搜尋：${q}</h2>
-      <div style="color:var(--mt);font-size:13px;padding:20px 0">找不到符合的文獻。試試其他關鍵字？</div>`;
+    m.innerHTML = `<h2>🔍 搜尋：${q}</h2>${filterBar}
+      <div style="color:var(--mt);font-size:13px;padding:20px 0">
+        在「${searchDomain === 'surgical' ? '手術專區' : searchDomain === 'general' ? '通用 CV' : '全部'}」找不到符合的文獻。試試其他關鍵字或切換上方類別？
+      </div>`;
     return;
   }
 
-  m.innerHTML = `<h2>🔍 搜尋：${q}</h2>
-    <div style="font-size:12px;color:var(--mt);margin-bottom:14px">找到 ${results.length} 篇文獻</div>
+  m.innerHTML = `<h2>🔍 搜尋：${q}</h2>${filterBar}
+    <div style="font-size:12px;color:var(--mt);margin-bottom:14px">找到 ${results.length} 篇文獻（依優先度排序）</div>
     ${results.map(pcHTML).join('')}`;
+}
+
+// Helper: text-match alone (no domain filter), used to count category sizes
+function matchText(p, q) {
+  const hay = [p.t, p.a, p.v, p.n, p.s, ...(p.tg || []), p.cat, p.sub]
+    .filter(Boolean).join(' ').toLowerCase();
+  return q.split(/\s+/).every(w => hay.includes(w));
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }

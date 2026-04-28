@@ -8,6 +8,7 @@ import { P, CHP, PHASES, LEARN_ROADMAP, PREREQS, PAPER_ROADMAP } from './data.js
 import { applyCkState } from './checkboxes.js';
 import { renderGraph } from './graph.js';
 import { renderTimeline } from './timeline.js';
+import { renderTagIndex } from './tag-index.js';
 
 const $ = id => document.getElementById(id);
 
@@ -46,6 +47,7 @@ export function renderP(id) {
   if (id === 'overview')        return renderOverview(m);
   if (id === 'graph')           return renderGraphPage(m);
   if (id === 'timeline')        return renderTimelinePage(m);
+  if (id === 'tags')            return renderTagsPage(m);
   if (id === 'phases')          return renderPhasesPage(m);
   if (id === 'roadmap_learn')   return renderLearnRoadmap(m);
   if (id === 'prereqs')         return renderPrereqs(m);
@@ -102,8 +104,19 @@ function renderTimelinePage(m) {
       Hover 高亮整條 lineage · 點節點開 PDF · 滾輪縮放、拖曳平移
     </div>
     <div id="timeline-chips" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap"></div>
-    <div id="timeline-container" style="width:100%;height:calc(100vh - 200px);border:1px solid var(--bd);border-radius:10px;overflow:hidden;background:#0a0a14;position:relative"></div>`;
+    <div id="timeline-path-banner" style="display:none;font-size:11.5px;background:rgba(255,180,100,.06);border:1px solid rgba(255,180,100,.2);border-radius:6px;padding:7px 12px;margin-bottom:10px"></div>
+    <div id="timeline-container" style="width:100%;height:calc(100vh - 240px);border:1px solid var(--bd);border-radius:10px;overflow:hidden;background:#0a0a14;position:relative"></div>`;
   renderTimeline();
+}
+
+// ----- Tag index -----
+function renderTagsPage(m) {
+  m.innerHTML = `<h2>🏷️ 標籤索引</h2>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:16px">
+      所有 paper 的標籤依類別分組 · 點擊標籤搜尋相關文獻 · 出現多次的標籤以較粗框線顯示
+    </div>
+    <div id="tag-index-container"></div>`;
+  renderTagIndex();
 }
 
 // ----- 9-phase schema -----
