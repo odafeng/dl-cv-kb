@@ -7,7 +7,7 @@ Working notes on research directions, brainstorms, and reading-derived ideas. Th
 | Note | Topic |
 |---|---|
 | [anatomy-aware-phase-recognition.md](./anatomy-aware-phase-recognition.md) | Reframing surgical phase recognition around anatomical structures rather than raw visual features, motivated by long-duration procedures (robotic TME) |
-| [ct-trocar-entry-adhesion.md](./ct-trocar-entry-adhesion.md) | Predicting zone-level adhesion at first-trocar entry sites from preoperative CT, as a multi-label classification task with video-derived ground truth |
+| [ct-trocar-entry-adhesion.md](./ct-trocar-entry-adhesion.md) | 用術前 CT 預測首隻 trocar 進入點 zone-level 沾黏,multi-label classification + 影片導出的 ground truth |
 
 ## Convention
 
